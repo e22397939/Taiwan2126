@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taiwan Cyber-Void: 2126 v6.5 [Ultimate Polish Edition]</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --theme-color: #ffaa00; 
+            --theme-glow: rgba(255, 170, 0, 0.35);
+            --theme-panel: #140d05;
+            --theme-border: #443311;
+            --theme-bg: #050301;
+        }
+
+        body {
+            background-color: var(--theme-bg); color: var(--theme-color); font-family: "Courier New", "Lucida Console", monospace;
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+        }
+
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; z-index: 9999; display: flex; justify-content: center; align-items: center;
+            padding: 20px; box-sizing: border-box;
+        }
+        .boot-terminal { width: 100%; max-width: 600px; font-size: 14px; line-height: 1.8; }
+        
+        #name-input-container { margin-top: 20px; display: none; }
+        .cyber-input {
+            background: transparent; border: none; border-bottom: 2px solid var(--theme-color);
+            color: #fff; font-family: inherit; font-size: 16px; width: 150px; outline: none; text-shadow: 0 0 5px var(--theme-color);
+        }
+        
+        .progress-container { margin-top: 25px; margin-bottom: 15px; border: 1px solid var(--theme-border); padding: 3px; background: rgba(255, 170, 0, 0.02); display: flex; align-items: center; }
+        .progress-bar-fill { height: 16px; background-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-color); width: 0%; transition: width 0.08s linear; }
+        .progress-status { font-size: 13px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+
+        .boot-btn { display: inline-block; margin-top: 10px; padding: 10px 20px; border: 2px dashed var(--theme-color); background: transparent; color: var(--theme-color); font-family: inherit; font-size: 15px; cursor: pointer; box-shadow: 0 0 10px var(--theme-glow); animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .game-window { width: 100vw; max-width: 1024px; height: 720px; display: flex; background: #000; position: relative; box-shadow: 0 0 30px var(--theme-glow); visibility: hidden; border: 3px solid var(--theme-border); }
+
+        .left-column { flex: 2; display: flex; flex-direction: column; border-right: 3px solid var(--theme-border); height: 100%; min-width: 0; }
+        
+        .viewport-section { height: 45%; background: #010202; position: relative; overflow: hidden; border-bottom: 3px solid var(--theme-border); display: flex; justify-content: center; align-items: center; }
+        #vector-canvas { width: 100%; height: 100%; background: #010202; display: block; }
+        #rain-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; visibility: hidden; }
+
+        .main-log-box { height: 55%; background: var(--theme-bg); padding: 20px; overflow-y: auto; font-size: 14px; line-height: 1.8; box-sizing: border-box; scroll-behavior: smooth; }
+        .log-entry { margin-bottom: 25px; border-bottom: 1px dashed rgba(255, 170, 0, 0.15); padding-bottom: 15px; white-space: pre-wrap; }
+        
+        .log-os { color: #88ffff; text-shadow: 0 0 3px rgba(0, 255, 255, 0.4); }
+        .log-super { color: #ffaa00; text-shadow: 0 0 3px rgba(255, 170, 0, 0.4); }
+        .log-id { color: #ff5555; text-shadow: 0 0 3px rgba(255, 85, 85, 0.4); }
+        .log-dice { color: #33ff33; font-weight: bold; }
+
+        .right-column { flex: 1; display: flex; flex-direction: column; height: 100%; background: var(--theme-panel); position: relative; min-width: 0; }
+        
+        .portrait-section { height: 35%; border-bottom: 3px solid var(--theme-border); display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; padding: 10px; }
+        #portrait-ascii { margin: 0; font-size: 11px; line-height: 1.1; color: var(--theme-color); white-space: pre; font-weight: bold; text-shadow: 0 0 3px var(--theme-color); }
+        .unit-name { font-size: 13px; margin-top: 8px; color: #fff; letter-spacing: 1px; text-shadow: 0 0 5px var(--theme-color); font-weight: bold; border-bottom: 1px solid var(--theme-color); padding-bottom: 2px; }
+
+        .status-section { height: 40%; border-bottom: 3px solid var(--theme-border); padding: 12px; font-size: 12px; position: relative; overflow: hidden; }
+        .panel-view { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
+        
+        #panel-item-detail { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--theme-panel); z-index: 20; padding: 15px; display: flex; flex-direction: column; box-sizing: border-box; }
+        #item-ascii-display { font-size: 12px; line-height: 1.1; color: #fff; text-align: center; margin-bottom: 15px; white-space: pre; text-shadow: 0 0 4px #fff; font-weight: bold; }
+        .item-desc-text { font-size: 13px; color: #ccc; line-height: 1.6; flex-grow: 1; overflow-y: auto; white-space: pre-wrap; margin-bottom: 10px; border-top: 1px dashed var(--theme-border); padding-top: 10px; }
+
+        .panel-title { border-bottom: 1px solid var(--theme-border); padding-bottom: 3px; margin-bottom: 4px; color: #fff; font-weight: bold; font-size: 11px; }
+        
+        .res-val { font-weight: bold; text-shadow: 0 0 5px var(--theme-color); color: #fff; }
+        
+        .inv-tabs { display: flex; gap: 4px; margin-top: 4px; border-bottom: 1px solid var(--theme-border); padding-bottom: 6px; }
+        .tab-btn { flex: 1; background: transparent; border: 1px solid var(--theme-border); color: rgba(255, 170, 0, 0.4); font-family: inherit; font-size: 12px; padding: 4px 5px; cursor: pointer; transition: all 0.2s ease; opacity: 0.5; font-weight: bold; text-align: center;}
+        .tab-btn.active { background: var(--theme-border); color: #fff; border-color: var(--theme-color); text-shadow: 0 0 5px var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); opacity: 1.0; }
+        
+        .inv-grid { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; margin-top: 6px; max-height: 95px; overflow-y: auto; }
+        .inv-item-btn { background: rgba(0, 0, 0, 0.4); border: 1px solid var(--theme-color); color: var(--theme-color); font-family: inherit; font-size: 11px; padding: 4px 8px; cursor: pointer; transition: all 0.1s;}
+        .inv-item-btn:hover { background: var(--theme-color); color: #000; }
+
+        .sys-btn { background: transparent; border: 1px dashed var(--theme-color); color: var(--theme-color); font-family: inherit; font-size: 12px; cursor: pointer; padding: 4px 8px; font-weight: bold; }
+        .sys-btn:hover { background: var(--theme-color); color: #000; }
+        
+        .color-picker { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .color-dot { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 1px solid #fff; }
+
+        .command-section { height: 25%; padding: 12px; box-sizing: border-box; display: grid; grid-template-columns: 1fr; gap: 6px; overflow-y: auto; }
+        .cmd-btn { background: rgba(0, 0, 0, 0.5); border: 2px solid var(--theme-color); color: #fff; font-family: inherit; font-size: 13px; cursor: pointer; text-align: left; padding-left: 15px; padding-top: 8px; padding-bottom: 8px; transition: all 0.1s; }
+        .cmd-btn:hover { background: rgba(255, 170, 0, 0.1); border-color: #fff; }
+        .cmd-btn:active { background: var(--theme-color); color: #000; }
+        .hidden-panel { display: none !important; }
+
+        .volume-control { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+        .volume-slider { flex-grow: 1; margin-left: 10px; background: var(--theme-border); accent-color: var(--theme-color); height: 6px; border-radius: 3px; cursor: pointer; }
+
+        .mobile-controls { display: none; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        @media (max-width: 768px) { .mobile-controls { display: grid; } }
+    </style>
+</head>
+<body>
+
+<div id="boot-screen">
+    <div class="boot-terminal">
+        <div id="boot-log"></div>
+        <div id="name-input-container">
+            <span>>> 請輸入公民代號 (CITIZEN_NAME): </span>
+            <input type="text" id="player-name-input" class="cyber-input" maxlength="12" placeholder="USER_001" onkeydown="if(event.key==='Enter') submitName()">
+        </div>
+        <div class="progress-container"><div id="progress-bar-fill" class="progress-bar-fill"></div></div>
+        <div class="progress-status"><span id="load-status-text">INITIALIZING CONSTRUCTS...</span><span id="load-percentage">0%</span></div>
+        <button id="connect-btn" class="boot-btn" style="display: none;" onclick="wakeUpSystem()">[ ACCEDE THE CYBER VOID ]</button>
+    </div>
+</div>
+
+<div class="game-window" id="main-window">
+    <div class="left-column">
+        <div class="viewport-section">
+            <canvas id="vector-canvas"></canvas>
+            <canvas id="rain-canvas"></canvas>
+        </div>
+        <div id="story-log-container" class="main-log-box"></div>
+    </div>
+    
+    <div class="right-column">
+        <div class="portrait-section"><pre id="portrait-ascii"></pre><div id="unit-name" class="unit-name">SYSTEM_STANDBY</div></div>
+        <div class="status-section">
+            <div id="panel-status" class="panel-view">
+                <div>
+                    <div class="panel-title">== CITIZEN_SIGNS ==</div>
+                    <!-- 精簡的 2x2 數值面板 -->
+                    <div style="display: flex; flex-wrap: wrap; margin-bottom: 8px;">
+                        <div style="width: 50%; display: flex; justify-content: space-between; padding-right: 8px; box-sizing: border-box; margin-bottom: 3px;">
+                            <span>肉體生命</span><span id="hp-val" class="res-val val-good">??</span>
+                        </div>
+                        <div style="width: 50%; display: flex; justify-content: space-between; padding-left: 8px; box-sizing: border-box; margin-bottom: 3px;">
+                            <span>晶片能量</span><span id="en-val" class="res-val val-good">??</span>
+                        </div>
+                        <div style="width: 50%; display: flex; justify-content: space-between; padding-right: 8px; box-sizing: border-box;">
+                            <span>精神心智</span><span id="san-val" class="res-val val-good">??</span>
+                        </div>
+                        <div style="width: 50%; display: flex; justify-content: space-between; padding-left: 8px; box-sizing: border-box;">
+                            <span>社會信用</span><span id="scs-val" class="res-val val-good">??</span>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-title" style="margin-top: 5px;">== MATRIX_PACK ==</div>
+                    <div class="inv-tabs">
+                        <button id="tab-items" class="tab-btn active" onclick="changeInvTab('items')">背包</button>
+                        <button id="tab-equip" class="tab-btn" onclick="changeInvTab('equip')">裝備</button>
+                    </div>
+                    <div id="inv-grid-container" class="inv-grid"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                    <div style="display: flex; justify-content: space-between; width: 50%; padding-right: 8px;">
+                        <span>企業幣:</span><span id="money-val" class="res-val val-good">??</span>
+                    </div>
+                    <button class="sys-btn" onclick="togglePanel('config')">[#] CONFIG</button>
+                </div>
+            </div>
+
+            <div id="panel-config" class="panel-view hidden-panel">
+                <div>
+                    <div class="panel-title">== SYSTEM_CONFIGURATION ==</div>
+                    <button id="mute-btn" class="sys-btn" style="width: 100%; text-align: left; margin-bottom: 5px;" onclick="toggleMute()">BGM_ENGINE: VOID_ON</button>
+                    
+                    <div class="volume-control">
+                        <span>BGM 低音音量:</span>
+                        <input type="range" id="volume-drone-slider" class="volume-slider" min="0" max="20" value="10" oninput="changeDroneVolume(this.value)">
+                    </div>
+                    <div class="volume-control">
+                        <span>雨滴回音音量:</span>
+                        <input type="range" id="volume-rain-slider" class="volume-slider" min="0" max="20" value="10" oninput="changeRainVolume(this.value)">
+                    </div>
+
+                    <div class="panel-title" style="margin-top: 8px;">== THEME_MATRIX ==</div>
+                    <div class="color-picker">
+                        <div class="color-dot" style="background: #ffaa00;" onclick="changeTheme('#ffaa00','rgba(255,170,0,0.25)','#1a130a','#443311','#040302')"></div>
+                        <div class="color-dot" style="background: #00ffff;" onclick="changeTheme('#00ffff','rgba(0,255,255,0.25)','#0a1616','#114444','#020404')"></div>
+                        <div class="color-dot" style="background: #ff3333;" onclick="changeTheme('#ff3333','rgba(255,51,51,0.25)','#1a0a0a','#441111','#040202')"></div>
+                        <div class="color-dot" style="background: #33ff33;" onclick="changeTheme('#33ff33','rgba(51,255,51,0.25)','#0d140d','#224422','#020402')"></div>
+                        <div class="color-dot" style="background: #cc33ff;" onclick="changeTheme('#cc33ff','rgba(204,51,255,0.25)','#140d1a','#331144','#030204')"></div>
+                        <div class="color-dot" style="background: #ffffff;" onclick="changeTheme('#ffffff','rgba(255,255,255,0.25)','#151515','#444444','#050505')"></div>
+                    </div>
+                </div>
+                <div style="text-align: right;"><button class="sys-btn" onclick="togglePanel('status')">[<] RETURN</button></div>
+            </div>
+
+            <div id="panel-item-detail" class="hidden-panel">
+                <div id="detail-title" class="panel-title" style="font-size:13px;">== ITEM ==</div>
+                <pre id="item-ascii-display"></pre>
+                <div id="detail-desc" class="item-desc-text"></div>
+                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                    <button id="item-action-btn" class="sys-btn" style="color: #fff; border-color: #fff;" onclick="confirmInteractItem()">[ 使用 ]</button>
+                    <button class="sys-btn" onclick="togglePanel('status')">[ 取消 ]</button>
+                </div>
+            </div>
+
+        </div>
+        <div id="options-container" class="command-section"></div>
+    </div>
+</div>
+
+<script>
+    let audioCtx = null; 
+    let bmgPlaying = false; 
+    let isMuted = false; 
+    let bmgInterval = null; 
+    let bmgStep = 0; 
+    
+    // 雙層背包系統邏輯
+    let currentInvTab = 'items'; 
+    let currentEquipSubTab = null;
+
+    let droneVolMultiplier = 1.0; 
+    let rainVolMultiplier = 1.0;  
+
+    const bassSequence = [110.0, 87.31, 130.81, 82.41, 110.0, 146.83, 98.00, 82.41]; 
+    const fifthSequence = [165.0, 130.81, 196.00, 123.47, 165.0, 220.00, 146.83, 123.47]; 
+
+    const bootLines = [
+        ">> CONNECTING TO TAIWAN_GOV_MAINFRAME [2126]...", 
+        ">> DEPLOYING 1970s PLATO VECTOR 3D RENDER ENGINE...", 
+        ">> STABILIZING CHROMATIC FREQUENCIES (80Hz - 220Hz)...", 
+        ">> STANDBY FOR CITIZEN PROFILE INITIALIZATION..."
+    ];
+    let lineIdx = 0; const logBox = document.getElementById('boot-log');
+    const fillBar = document.getElementById('progress-bar-fill'); const percentText = document.getElementById('load-percentage'); const statusText = document.getElementById('load-status-text');
+    let playerName = "USER_001"; 
+
+    function printBootLog() {
+        if (lineIdx < bootLines.length) {
+            logBox.innerHTML += bootLines[lineIdx] + "<br>";
+            let currentPercent = Math.floor(((lineIdx + 1) / (bootLines.length + 2)) * 100);
+            fillBar.style.width = currentPercent + "%"; percentText.innerText = currentPercent + "%";
+            lineIdx++; setTimeout(printBootLog, 400);
+        } else {
+            document.getElementById('name-input-container').style.display = 'block'; document.getElementById('player-name-input').focus();
+        }
+    }
+    printBootLog();
+
+    function submitName() {
+        const input = document.getElementById('player-name-input').value.trim(); if (input !== "") playerName = input;
+        document.getElementById('name-input-container').style.display = 'none';
+        logBox.innerHTML += `<br>>> IDENTITY INITIALIZED: <b>${playerName}</b><br>>> PROTOCOL: READY.<br>`;
+        fillBar.style.width = "100%"; percentText.innerText = "100%"; statusText.innerText = "PRESS TO COMMENCE BIOMETRIC REBOOT.";
+        document.getElementById('connect-btn').style.display = 'block';
+    }
+
+    function wakeUpSystem() {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        playBootChime(); startAmbientAtmosphere(); setTimeout(initCyberSynth, 150);
+        document.getElementById('boot-screen').style.display = 'none'; document.getElementById('main-window').style.visibility = 'visible';
+        resizeVectorCanvas();
+        renderStep('start');
+    }
+
+    function playClickSound() {
+        if (isMuted || !audioCtx) return;
+        try { const now = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(750, now); osc.frequency.exponentialRampToValueAtTime(200, now + 0.08); gain.gain.setValueAtTime(0.03, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.08); } catch(e){}
+    }
+    function playBootChime() {
+        if (isMuted) return;
+        try { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(660, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime + 1.5); gain.gain.setValueAtTime(0.12, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.5); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 1.5); } catch(e){}
+    }
+    let windFilter = null;
+    function startAmbientAtmosphere() {
+        try { const windOsc = audioCtx.createOscillator(); windFilter = audioCtx.createBiquadFilter(); const windGain = audioCtx.createGain(); windOsc.type = 'triangle'; windOsc.frequency.setValueAtTime(30, audioCtx.currentTime); windFilter.type = 'bandpass'; windFilter.frequency.setValueAtTime(220, audioCtx.currentTime); windFilter.Q.setValueAtTime(1.0, audioCtx.currentTime); windGain.gain.setValueAtTime(0.02, audioCtx.currentTime); windOsc.connect(windFilter); windFilter.connect(windGain); windGain.connect(audioCtx.destination); windOsc.start(); } catch(e){}
+    }
+
+    function triggerEtherealPing(freq, baseVol) {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const finalVol = baseVol * rainVolMultiplier;
+        const createPing = (f, v, t) => {
+            try {
+                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                o.type = 'sine'; o.frequency.setValueAtTime(f, t);
+                g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(t); o.stop(t + 2.0);
+            } catch(e){}
+        };
+        createPing(freq, finalVol, now);
+        createDropEcho(freq * 0.99, finalVol * 0.5, now + 0.6); 
+        createDropEcho(freq * 0.98, finalVol * 0.2, now + 1.2); 
+    }
+
+    function createDropEcho(freq, vol, time) {
+        try {
+            const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            o.type = 'sine'; o.frequency.setValueAtTime(freq, time);
+            g.gain.setValueAtTime(vol, time); g.gain.exponentialRampToValueAtTime(0.0001, time + 1.2);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(time); o.stop(time + 1.3);
+        } catch(e){}
+    }
+
+    function initCyberSynth() {
+        if (bmgPlaying) return; bmgPlaying = true;
+        bmgInterval = setInterval(() => {
+            if (isMuted || !audioCtx) return; const t = audioCtx.currentTime;
+            try {
+                const step = bmgStep % 64; let chordIdx = Math.floor(step / 8);
+                if (windFilter) { const sweep = 220 + Math.sin(bmgStep * 0.03) * 60; windFilter.frequency.setValueAtTime(sweep, t); }
+                if (step % 8 === 0) { createDrone(bassSequence[chordIdx], 0.16 * droneVolMultiplier, t, 2.5); }
+                if (step % 8 === 4) { createDrone(fifthSequence[chordIdx], 0.10 * droneVolMultiplier, t, 3.0); }
+                if (Math.random() > 0.85) {
+                    const randomFreq = 1100 + Math.random() * 800; 
+                    triggerEtherealPing(randomFreq, 0.02);
+                }
+                bmgStep++;
+            } catch(e){}
+        }, 880);
+    }
+
+    function createDrone(freq, vol, time, attackTime) {
+        try { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter(); osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time); filter.type = 'lowpass'; filter.frequency.setValueAtTime(280, time); gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(vol, time + attackTime); gain.gain.exponentialRampToValueAtTime(0.0001, time + attackTime + 3.5); osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination); osc.start(time); osc.stop(time + attackTime + 3.7); } catch(e){}
+    }
+
+    function changeDroneVolume(val) { droneVolMultiplier = parseFloat(val) / 10; }
+    function changeRainVolume(val) { rainVolMultiplier = parseFloat(val) / 10; }
+
+    const rainCanvas = document.getElementById('rain-canvas'); const rainCtx = rainCanvas.getContext('2d'); let rainDrops = [];
+    function resizeRainCanvas() { rainCanvas.width = rainCanvas.parentElement.clientWidth; rainCanvas.height = rainCanvas.parentElement.clientHeight; }
+    window.addEventListener('resize', () => { resizeRainCanvas(); resizeVectorCanvas(); }); resizeRainCanvas();
+    for (let i = 0; i < 40; i++) { rainDrops.push({ x: Math.random() * 700, y: Math.random() * 250, length: Math.random() * 15 + 10, speed: Math.random() * 7 + 5 }); }
+    function drawRain() {
+        rainCtx.clearRect(0, 0, rainCanvas.width, rainCanvas.height); rainCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--theme-color'); rainCtx.lineWidth = 1;
+        rainDrops.forEach(drop => { rainCtx.beginPath(); rainCtx.moveTo(drop.x, drop.y); rainCtx.lineTo(drop.x - 1, drop.y + drop.length); rainCtx.stroke(); drop.y += drop.speed; drop.x -= 0.5; if (drop.y > rainCanvas.height) { drop.y = -drop.length; drop.x = Math.random() * rainCanvas.width + 50; } });
+        requestAnimationFrame(drawRain);
+    }
+    requestAnimationFrame(drawRain);
+
+    function togglePanel(target) {
+        playClickSound();
+        document.getElementById('panel-status').classList.add('hidden-panel');
+        document.getElementById('panel-config').classList.add('hidden-panel');
+        document.getElementById('panel-item-detail').classList.add('hidden-panel');
+        if (target === 'config') document.getElementById('panel-config').classList.remove('hidden-panel');
+        else if (target === 'item-detail') document.getElementById('panel-item-detail').classList.remove('hidden-panel');
+        else document.getElementById('panel-status').classList.remove('hidden-panel');
+    }
+    function toggleMute() { playClickSound(); isMuted = !isMuted; document.getElementById('mute-btn').innerText = isMuted ? "BGM_ENGINE: MUTED" : "BGM_ENGINE: VOID_ON"; }
+    function changeTheme(color, glow, panel, border, bg) { playClickSound(); document.documentElement.style.setProperty('--theme-color', color); document.documentElement.style.setProperty('--theme-glow', glow); document.documentElement.style.setProperty('--theme-panel', panel); document.documentElement.style.setProperty('--theme-border', border); document.documentElement.style.setProperty('--theme-bg', bg); triggerRedraw(); }
+
+    // 🎨 ASCII 角色肖像矩陣 (全部12行純粹符號化，無中文，極致對齊)
+    const ART = {
+        player: 
+        `       .--------.\n` +
+        `      /          \\\n` +
+        `     |            |\n` +
+        `     |============|\n` +
+        `     |############|\n` +
+        `     |============|\n` +
+        `      \\    __    /\n` +
+        `       \\  \\__/  /\n` +
+        `        '------'\n` +
+        `      .-'      '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   |      |   \\`,
+        clerk:  
+        `       .--------.\n` +
+        `      /  ======  \\\n` +
+        `     |  [======]  |\n` +
+        `     |  | O  O |  |\n` +
+        `     |  [======]  |\n` +
+        `     |            |\n` +
+        `      \\   ----   /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'  ||  '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   | CLERK|   \\`,
+        oldman: 
+        `       .--------.\n` +
+        `      /~~~~~~~~~~\\\n` +
+        `     |            |\n` +
+        `     |  ⌐■____■   |\n` +
+        `     |  (o)  (o)  |\n` +
+        `     |            |\n` +
+        `      \\  [==--   /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'      '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   [ MECH ]   \\`,
+        zhonggua:
+        `       .--------.\n` +
+        `      /  ======  \\\n` +
+        `     |  /  __  \\  |\n` +
+        `     |  | (@@) |  |\n` +
+        `     |  \\  --  /  |\n` +
+        `     |   ======   |\n` +
+        `      \\          /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'  ||  '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   |  SYS |   \\`,
+        cybertech:
+        `       .||||||||.\n` +
+        `      / /|/|/|/| \\\n` +
+        `     |            |\n` +
+        `     |  [O][O][O] |\n` +
+        `     |   \\====/   |\n` +
+        `     |            |\n` +
+        `      \\   ----   /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'  ||  '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   |HACKER|   \\`,
+        wowolun:
+        `       .--------.\n` +
+        `      /   ><><   \\\n` +
+        `     |  /\\____/\\  |\n` +
+        `     |  |  ><  |  |\n` +
+        `     |  \\_====_/  |\n` +
+        `     |            |\n` +
+        `      \\   ----   /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'      '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   |  V4  |   \\`,
+        taike:  
+        `       .\\/\\/\\/\\/.\n` +
+        `      /          \\\n` +
+        `     |            |\n` +
+        `     |  \\ /  \\ /  |\n` +
+        `     |  [O]  [O]  |\n` +
+        `     |   \\____/   |\n` +
+        `      \\  (XXXX)  /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'  ||  '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   | TAIKE|   \\`,
+        salaryman:
+        `       .////////.\n` +
+        `      / / // //  \\\n` +
+        `     |  .------.  |\n` +
+        `     |  | -__- |  |\n` +
+        `     |  |______|  |\n` +
+        `     |   \\ == /   |\n` +
+        `      \\   ----   /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'  ||  '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   |SALARY|   \\`,
+        homeless:
+        `       .@@@@@@@@.\n` +
+        `      / @ @ @@ @ \\\n` +
+        `     |            |\n` +
+        `     |  [O]  [x]  |\n` +
+        `     |   /    \\   |\n` +
+        `     |   |____|   |\n` +
+        `      \\  \\____/  /\n` +
+        `       \\_@@@@@@_/\n` +
+        `        '------'\n` +
+        `      .-'  ~~  '-.\n` +
+        `     /  (      )  \\\n` +
+        `    /   [VAGRANT]  \\`,
+        mazu_deity: 
+        `       .--------.\n` +
+        `      /  * * * \\\n` +
+        `     |            |\n` +
+        `     |  [=]  [=]  |\n` +
+        `     |   __V__    |\n` +
+        `     |  [=====]   |\n` +
+        `      \\          /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'      '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   | DEITY|   \\`,
+        ah_dong: 
+        `       .########.\n` +
+        `      /##########\\\n` +
+        `     |            |\n` +
+        `     |   [====]   |\n` +
+        `     |  /(o)  (o) |\n` +
+        `     | /          |\n` +
+        `      \\_ [===~   /\n` +
+        `       \\________/\n` +
+        `        '------'\n` +
+        `      .-'      '-.\n` +
+        `     /  |======|  \\\n` +
+        `    /   |AH-DONG|  \\`
+    };
+
+    const DUNGEON_MAP = [
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 'C', 0, 'S', 0, 'E', 1], 
+        [1, 0, 1, 1, 1, 0, 1],
+        [1, 'U', 1, 'M', 1, 'V', 1], 
+        [1, 0, 1, 0, 1, 0, 1],
+        [1, 'B', 0, 0, 0, 0, 1], 
+        [1, 1, 1, 1, 1, 1, 1]
+    ];
+    const mapWidth = 7; const mapHeight = 7;
+    let pX = 2; let pY = 4; let pDir = 0; 
+    let currentSceneView = 'room'; 
+
+    const vectorCanvas = document.getElementById('vector-canvas');
+    const vCtx = vectorCanvas.getContext('2d');
+
+    function resizeVectorCanvas() {
+        vectorCanvas.width = vectorCanvas.parentElement.clientWidth;
+        vectorCanvas.height = vectorCanvas.parentElement.clientHeight;
+        triggerRedraw();
+    }
+
+    function isWall(gx, gy) {
+        if (gx < 0 || gx >= mapWidth || gy < 0 || gy >= mapHeight) return true;
+        return DUNGEON_MAP[gy][gx] === 1;
+    }
+
+    function triggerRedraw() {
+        if (!vCtx) return;
+        const w = vectorCanvas.width;
+        const h = vectorCanvas.height;
+        const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim();
+
+        vCtx.clearRect(0, 0, w, h);
+        const splitX = w * 0.65;
+        vCtx.strokeStyle = themeColor;
+        vCtx.lineWidth = 1;
+        vCtx.beginPath();
+        vCtx.moveTo(splitX, 0); vCtx.lineTo(splitX, h);
+        vCtx.stroke();
+
+        vCtx.shadowBlur = 8;
+        vCtx.shadowColor = themeColor;
+
+        if (currentSceneView === 'dungeon') drawFirstPerson3D(vCtx, splitX, h, themeColor);
+        else drawVectorScene(vCtx, currentSceneView, splitX, h, themeColor);
+
+        drawRadar2D(vCtx, splitX, w, h, themeColor);
+        vCtx.shadowBlur = 0;
+    }
+
+    function drawFirstPerson3D(ctx, splitX, h, themeColor) {
+        const cx = splitX / 2; const cy = h / 2;
+        const projection = [
+            { l: 0,            r: splitX,       t: 0,          b: h },           
+            { l: cx - cx*0.6,  r: cx + cx*0.6,  t: cy - cy*0.6, b: cy + cy*0.6 }, 
+            { l: cx - cx*0.35, r: cx + cx*0.35, t: cy - cy*0.35, b: cy + cy*0.35 }, 
+            { l: cx - cx*0.18, r: cx + cx*0.18, t: cy - cy*0.18, b: cy + cy*0.18 }, 
+            { l: cx - cx*0.08, r: cx + cx*0.08, t: cy - cy*0.08, b: cy + cy*0.08 }  
+        ];
+
+        const fX = [0, 1, 0, -1][pDir]; const fY = [-1, 0, 1, 0][pDir];
+        const rX = [1, 0, -1, 0][pDir]; const rY = [0, 1, 0, -1][pDir];
+        ctx.lineWidth = 2;
+
+        for (let z = 3; z >= 0; z--) {
+            const mapX = pX + fX * z; const mapY = pY + fY * z;
+            if (mapX < 0 || mapX >= mapWidth || mapY < 0 || mapY >= mapHeight) continue;
+
+            const leftWall = isWall(mapX - rX, mapY - rY);
+            const rightWall = isWall(mapX + rX, mapY + rY);
+            const frontWall = isWall(mapX, mapY);
+            const curr = projection[z]; const next = projection[z + 1];
+
+            if (frontWall) {
+                ctx.fillStyle = "#020303";
+                ctx.fillRect(curr.l, curr.t, curr.r - curr.l, curr.b - curr.t);
+                ctx.strokeRect(curr.l, curr.t, curr.r - curr.l, curr.b - curr.t);
+                // 純淨的發光方格，沒有不合時宜的大叉叉
+                continue; 
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(curr.l, curr.t); ctx.lineTo(next.l, next.t);
+            ctx.moveTo(curr.r, curr.t); ctx.lineTo(next.r, next.t);
+            ctx.moveTo(curr.l, curr.b); ctx.lineTo(next.l, next.b);
+            ctx.moveTo(curr.r, curr.b); ctx.lineTo(next.r, next.b);
+            ctx.stroke();
+
+            if (z === 3 && !frontWall) {
+                ctx.fillStyle = "#010202";
+                ctx.fillRect(next.l, next.t, next.r - next.l, next.b - next.t);
+                ctx.strokeRect(next.l, next.t, next.r - next.l, next.b - next.t);
+            }
+
+            if (leftWall) {
+                ctx.fillStyle = "#040505";
+                ctx.beginPath();
+                ctx.moveTo(curr.l, curr.t); ctx.lineTo(next.l, next.t);
+                ctx.lineTo(next.l, next.b); ctx.lineTo(curr.l, curr.b);
+                ctx.closePath();
+                ctx.fill(); ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(next.l, next.t); ctx.lineTo(curr.l, next.t);
+                ctx.moveTo(next.l, next.b); ctx.lineTo(curr.l, next.b);
+                ctx.stroke();
+            }
+
+            if (rightWall) {
+                ctx.fillStyle = "#040505";
+                ctx.beginPath();
+                ctx.moveTo(curr.r, curr.t); ctx.lineTo(next.r, next.t);
+                ctx.lineTo(next.r, next.b); ctx.lineTo(curr.r, curr.b);
+                ctx.closePath();
+                ctx.fill(); ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(next.r, next.t); ctx.lineTo(curr.r, next.t);
+                ctx.moveTo(next.r, next.b); ctx.lineTo(curr.r, next.b);
+                ctx.stroke();
+            }
+        }
+    }
+
+    function drawVectorScene(ctx, sceneKey, splitX, h, themeColor) {
+        ctx.lineWidth = 1.5; ctx.strokeStyle = themeColor;
+        const cx = splitX / 2; const cy = h / 2;
+
+        if (sceneKey === 'room') {
+            ctx.beginPath();
+            for (let i = 0; i <= 6; i++) {
+                let offset = (i - 3) * (splitX * 0.12);
+                ctx.moveTo(cx + offset, h); ctx.lineTo(cx + offset * 0.2, cy + 20);
+                ctx.moveTo(cx + offset, 0); ctx.lineTo(cx + offset * 0.2, cy - 60);
+            }
+            ctx.stroke();
+            ctx.fillStyle = "#010202";
+            ctx.beginPath();
+            ctx.moveTo(cx - 100, cy + 80); ctx.lineTo(cx + 100, cy + 80);
+            ctx.lineTo(cx + 80, cy + 20); ctx.lineTo(cx - 80, cy + 20);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.strokeRect(cx - 140, cy - 70, 60, 40); 
+            ctx.beginPath();
+            ctx.moveTo(cx - 130, cy - 60); ctx.lineTo(cx - 90, cy - 60);
+            ctx.moveTo(cx - 130, cy - 50); ctx.lineTo(cx - 100, cy - 50);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - 20, cy - 120); ctx.lineTo(cx + 20, cy - 120);
+            ctx.lineTo(cx + 30, cy - 100); ctx.lineTo(cx - 30, cy - 100);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.setLineDash([2, 4]);
+            ctx.beginPath();
+            ctx.moveTo(cx - 30, cy - 100); ctx.lineTo(cx - 60, cy);
+            ctx.moveTo(cx + 30, cy - 100); ctx.lineTo(cx + 60, cy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        } else if (sceneKey === 'store') {
+            ctx.beginPath(); ctx.moveTo(0, cy + 50); ctx.lineTo(splitX, cy + 50); ctx.stroke();
+            ctx.fillStyle = "#010202"; ctx.beginPath();
+            ctx.moveTo(20, h); ctx.lineTo(cx - 60, cy + 50);
+            ctx.lineTo(cx - 60, cy - 80); ctx.lineTo(20, cy - 120);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            for(let i = 0; i < 3; i++) {
+                let bx = 30 + i * 20; let by = cy - 20 - i*15;
+                ctx.strokeRect(bx, by, 15, 25); 
+                ctx.beginPath(); ctx.arc(bx + 30, by + 10, 8, 0, Math.PI*2); ctx.stroke();
+            }
+            ctx.strokeRect(cx + 40, cy + 10, 100, 40); 
+            ctx.strokeRect(cx + 60, cy - 20, 40, 30);
+            ctx.beginPath(); ctx.arc(cx + 80, cy - 10, 8, 0, Math.PI * 2); ctx.stroke();
+            ctx.strokeRect(cx - 80, cy - 110, 160, 30);
+            ctx.fillStyle = themeColor; ctx.font = "bold 14px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText("PONY-II", cx, cy - 95);
+        } else if (sceneKey === 'stall') {
+            ctx.fillStyle = "#010202"; ctx.strokeRect(cx - 100, cy - 10, 200, 70); ctx.fillRect(cx - 100, cy - 10, 200, 70);
+            ctx.beginPath(); ctx.moveTo(cx - 110, cy - 80); ctx.lineTo(cx + 110, cy - 80);
+            ctx.lineTo(cx + 90, cy - 100); ctx.lineTo(cx - 90, cy - 100); ctx.closePath(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - 90, cy - 10); ctx.lineTo(cx - 90, cy - 80);
+            ctx.moveTo(cx + 90, cy - 10); ctx.lineTo(cx + 90, cy - 80); ctx.stroke();
+            ctx.fillStyle = themeColor; ctx.font = "bold 14px monospace"; ctx.textAlign = "center"; ctx.fillText("仿製蝦捲", cx, cy - 85);
+        } else if (sceneKey === 'corporate') {
+            ctx.beginPath(); ctx.moveTo(0, cy + 60); ctx.lineTo(splitX, cy + 60); ctx.stroke();
+            ctx.strokeRect(cx - 100, cy - 100, 200, 40);
+            ctx.fillStyle = themeColor; ctx.font = "bold 16px monospace"; ctx.textAlign = "center"; ctx.fillText("ZHONG-GUA", cx, cy - 75);
+            ctx.strokeRect(cx - 60, cy - 20, 120, 80);
+            ctx.beginPath(); ctx.moveTo(cx - 20, cy - 50); ctx.lineTo(cx + 20, cy - 50); ctx.lineTo(cx, cy - 80); ctx.closePath(); ctx.stroke();
+            ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(cx - 50, cy - 20); ctx.lineTo(cx - 20, cy - 50); ctx.moveTo(cx + 50, cy - 20); ctx.lineTo(cx + 20, cy - 50); ctx.stroke(); ctx.setLineDash([]);
+        } else if (sceneKey === 'diy') {
+            ctx.beginPath(); ctx.moveTo(0, cy + 60); ctx.lineTo(splitX, cy + 60); ctx.stroke();
+            ctx.strokeRect(cx - 120, cy + 10, 240, 50);
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath(); ctx.moveTo(cx - 100 + i*40, cy + 30);
+                ctx.bezierCurveTo(cx - 90 + i*40, cy + 10, cx - 110 + i*40, cy + 50, cx - 80 + i*40, cy + 40); ctx.stroke();
+            }
+        } else if (sceneKey === 'temple') {
+            ctx.beginPath(); ctx.moveTo(0, cy + 60); ctx.lineTo(splitX, cy + 60); ctx.stroke();
+            ctx.strokeRect(cx - 110, cy - 80, 220, 140);
+            ctx.beginPath(); ctx.moveTo(cx - 130, cy - 80); ctx.quadraticCurveTo(cx, cy - 120, cx + 130, cy - 80);
+            ctx.lineTo(cx + 110, cy - 70); ctx.quadraticCurveTo(cx, cy - 100, cx - 110, cy - 70); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.strokeRect(cx - 30, cy + 10, 60, 40);
+            ctx.beginPath(); ctx.ellipse(cx, cy + 10, 30, 8, 0, 0, Math.PI * 2); ctx.stroke();
+        } else if (sceneKey === 'cars') {
+            ctx.beginPath(); ctx.moveTo(0, cy + 40); ctx.lineTo(splitX, cy + 40); ctx.stroke();
+            ctx.strokeRect(cx - 140, cy - 100, 280, 140);
+            ctx.beginPath(); ctx.moveTo(cx - 140, cy + 40); ctx.lineTo(cx - 160, h); ctx.moveTo(cx + 140, cy + 40); ctx.lineTo(cx + 160, h); ctx.stroke();
+            ctx.fillStyle = themeColor; ctx.font = "bold 16px monospace"; ctx.textAlign = "center"; ctx.fillText("VOWO-LUN MOTORS", cx, cy - 80);
+            ctx.beginPath(); ctx.arc(cx - 50, cy, 15, 0, Math.PI*2); ctx.arc(cx + 30, cy, 15, 0, Math.PI*2); 
+            ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 20, cy - 20); ctx.lineTo(cx + 10, cy - 20); ctx.lineTo(cx + 30, cy); ctx.lineTo(cx - 10, cy); ctx.closePath(); ctx.stroke();
+            ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx - 60, cy + 70, 30, 0, Math.PI*2); ctx.arc(cx + 80, cy + 70, 30, 0, Math.PI*2); 
+            ctx.moveTo(cx - 60, cy + 70); ctx.lineTo(cx - 10, cy + 20); ctx.lineTo(cx + 50, cy + 20); ctx.lineTo(cx + 80, cy + 70); ctx.lineTo(cx, cy + 70); ctx.closePath(); ctx.stroke(); ctx.lineWidth = 1.5;
+        } else if (sceneKey === 'basement') {
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                let xLoc = cx - 120 + i * 60; ctx.strokeRect(xLoc, cy - 90, 40, 140);
+                for (let j = 0; j < 6; j++) { ctx.beginPath(); ctx.moveTo(xLoc + 5, cy - 80 + j * 20); ctx.lineTo(xLoc + 35, cy - 80 + j * 20); ctx.stroke(); }
+            }
+            ctx.beginPath(); ctx.moveTo(cx - 150, 0); ctx.bezierCurveTo(cx - 100, cy - 40, cx - 50, cy - 80, cx, cy - 90);
+            ctx.moveTo(cx + 150, 0); ctx.bezierCurveTo(cx + 100, cy - 40, cx + 50, cy - 80, cx, cy - 90); ctx.stroke();
+        } else if (sceneKey === 'scrap') {
+            ctx.beginPath(); ctx.moveTo(0, cy + 60); ctx.lineTo(splitX, cy + 60); ctx.stroke();
+            for (let k = 0; k < 5; k++) {
+                let ox = cx - 120 + k * 60; let oy = cy + 60; let hgt = 40 + (k % 3) * 20;
+                ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + 30, oy - hgt); ctx.lineTo(ox + 60, oy); ctx.closePath(); ctx.stroke();
+            }
+        } else if (sceneKey === 'gangster') {
+            ctx.beginPath(); ctx.moveTo(0, cy + 50); ctx.lineTo(splitX, cy + 50); ctx.stroke();
+            ctx.strokeRect(cx - 100, cy - 100, 200, 35);
+            ctx.fillStyle = themeColor; ctx.font = "bold 14px monospace"; ctx.textAlign = "center"; ctx.fillText("★ 雙子星檳榔 ★", cx, cy - 78);
+            ctx.fillStyle = "#010202"; ctx.beginPath();
+            ctx.ellipse(cx - 50, cy + 30, 25, 8, 0, 0, Math.PI * 2); ctx.ellipse(cx - 50, cy + 90, 25, 8, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - 75, cy + 30); ctx.lineTo(cx - 75, cy + 90); ctx.moveTo(cx - 25, cy + 30); ctx.lineTo(cx - 25, cy + 90); ctx.stroke();
+            ctx.strokeRect(cx + 40, cy + 40, 40, 50); ctx.beginPath(); ctx.moveTo(cx + 40, cy + 60); ctx.lineTo(cx + 80, cy + 60); ctx.stroke();
+        }
+    }
+
+    function drawRadar2D(ctx, splitX, w, h, themeColor) {
+        const mapAreaW = w - splitX;
+        const gridCell = Math.min(mapAreaW / (mapWidth + 2), h / (mapHeight + 2));
+        const startX = splitX + (mapAreaW - gridCell * mapWidth) / 2;
+        const startY = (h - gridCell * mapHeight) / 2;
+
+        ctx.shadowBlur = 4;
+        for (let y = 0; y < mapHeight; y++) {
+            for (let x = 0; x < mapWidth; x++) {
+                const item = DUNGEON_MAP[y][x];
+                const cxLoc = startX + x * gridCell; const cyLoc = startY + y * gridCell;
+
+                if (item === 1) { ctx.strokeStyle = themeColor; ctx.strokeRect(cxLoc + 2, cyLoc + 2, gridCell - 4, gridCell - 4); } 
+                else if (item !== 0) {
+                    ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.floor(gridCell*0.6)}px monospace`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText(item, cxLoc + gridCell/2, cyLoc + gridCell/2); ctx.strokeStyle = themeColor; ctx.strokeRect(cxLoc + 1, cyLoc + 1, gridCell - 2, gridCell - 2);
+                } else {
+                    ctx.strokeStyle = "rgba(255, 170, 0, 0.15)"; ctx.strokeRect(cxLoc, cyLoc, gridCell, gridCell);
+                }
+            }
+        }
+        const pCenterX = startX + pX * gridCell + gridCell / 2; const pCenterY = startY + pY * gridCell + gridCell / 2;
+        const arrowSize = gridCell / 3;
+        ctx.fillStyle = "#fff"; ctx.shadowColor = "#fff"; ctx.shadowBlur = 12; ctx.beginPath();
+        if (pDir === 0) { ctx.moveTo(pCenterX, pCenterY - arrowSize); ctx.lineTo(pCenterX - arrowSize*0.8, pCenterY + arrowSize*0.8); ctx.lineTo(pCenterX + arrowSize*0.8, pCenterY + arrowSize*0.8); } 
+        else if (pDir === 1) { ctx.moveTo(pCenterX + arrowSize, pCenterY); ctx.lineTo(pCenterX - arrowSize*0.8, pCenterY - arrowSize*0.8); ctx.lineTo(pCenterX - arrowSize*0.8, pCenterY + arrowSize*0.8); } 
+        else if (pDir === 2) { ctx.moveTo(pCenterX, pCenterY + arrowSize); ctx.lineTo(pCenterX - arrowSize*0.8, pCenterY - arrowSize*0.8); ctx.lineTo(pCenterX + arrowSize*0.8, pCenterY - arrowSize*0.8); } 
+        else if (pDir === 3) { ctx.moveTo(pCenterX - arrowSize, pCenterY); ctx.lineTo(pCenterX + arrowSize*0.8, pCenterY - arrowSize*0.8); ctx.lineTo(pCenterX + arrowSize*0.8, pCenterY + arrowSize*0.8); }
+        ctx.closePath(); ctx.fill();
+    }
+
+    function playerMove() {
+        if(document.getElementById('options-container').getAttribute('data-step') !== 'street_hub' && currentSceneView !== 'dungeon') return;
+        const fX = [0, 1, 0, -1][pDir]; const fY = [-1, 0, 1, 0][pDir];
+        const nextX = pX + fX; const nextY = pY + fY;
+
+        if (!isWall(nextX, nextY)) {
+            pX = nextX; pY = nextY; playClickSound(); triggerRedraw(); checkGridTrigger();
+        } else {
+            if (!isMuted && audioCtx) {
+                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                o.type = 'sine'; o.frequency.setValueAtTime(100, audioCtx.currentTime);
+                g.gain.setValueAtTime(0.05, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+                o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.2);
+            }
+        }
+    }
+
+    function playerTurn(side) {
+        if(document.getElementById('options-container').getAttribute('data-step') !== 'street_hub' && currentSceneView !== 'dungeon') return;
+        if (side === 'left') pDir = (pDir + 3) % 4; else pDir = (pDir + 1) % 4;
+        playClickSound(); triggerRedraw();
+    }
+
+    function checkGridTrigger() {
+        const item = DUNGEON_MAP[pY][pX];
+        if (item === 'C') renderStep('goto_ponytwo');
+        else if (item === 'S') renderStep('goto_stall');
+        else if (item === 'E') renderStep('goto_zhonggua');
+        else if (item === 'U') renderStep('goto_diy_shop');
+        else if (item === 'V') renderStep('goto_wowolun');
+        else if (item === 'M') renderStep('goto_temple');
+        else if (item === 'B') renderStep('goto_betelnut');
+        else if (item === 0) {
+            if (!gameState.encSalaryman && Math.random() < 0.08) {
+                gameState.encSalaryman = true; renderStep('encounter_salaryman');
+            } else if (!gameState.encHomeless && Math.random() < 0.08) {
+                gameState.encHomeless = true; renderStep('encounter_homeless');
+            }
+        }
+    }
+
+    let gameState = { 
+        hp: null, en: null, san: null, scs: null, credits: null, 
+        inventory: ["過期健保卡"], equippedWpn: "UNARMED", equippedAmr: "NONE", equippedAcc: "NONE",
+        originWeights: { rat: 0, tech: 0, corp: 0 }, finalOrigin: "未定義",
+        hasKey: false, usedIncense: false, encSalaryman: false, encHomeless: false,
+        knowsTempleSecret: false, temp_hack_success: false
+    };
+
+    const ITEM_DB = {
+        "過期健保卡": { 
+            type: "read", 
+            name: "過期健保卡", 
+            ascii: ` .-----------.\n | N-H-I [1] |\n | ID:000-XX |\n '-----------'`, 
+            desc: "晶片化時代前的古物。上面隱約寫著『全民健康保險』。\n\n[OS_KERNEL]：無效的醫療代碼，在當前私有化體制下毫無經濟價值。", 
+            effect: () => { logEvent(">> 系統：這東西在2126年什麼都換不到，只能刮刮義體的生鏽外殼。"); } 
+        },
+        "半瓶生理鹽水": { 
+            type: "use", 
+            name: "半瓶生理鹽水", 
+            ascii: `   ___\n  |   |\n  |NaCl|\n  |___|`, 
+            desc: "一瓶混濁的生理鹽水，標籤已經模糊不清。\n\n功能：稍微緩解脫水與不適 (VIT +5)。", 
+            effect: () => { gameState.hp = Math.min(100, gameState.hp + 5); logEvent(">> 系統：喝下微鹹的液體，感覺好了一點。VIT +5"); } 
+        },
+        "電子仿肉蝦捲": { type: "use", name: "電子仿肉蝦捲", ascii: `   (~)\n  [====]\n  [====]`, desc: "高密度昆蟲蛋白與化學魚醬油炸成的暗巷小吃。\n\n功能：恢復 10 點肉體生命 (VIT)。", effect: () => { gameState.hp = Math.min(100, gameState.hp + 10); logEvent(">> 系統：你吞下了合成蝦捲。VIT +10"); } },
+        "芃貳功能飲料": { type: "use", name: "芃貳功能飲料", ascii: `   _[]_\n  |    |\n  | P2 |\n  | EN |\n  |____|`, desc: "螢光綠色的液體，富含非法電解質。\n\n功能：恢復 15 點晶片能量 (N-E)。", effect: () => { gameState.en = Math.min(100, gameState.en + 15); logEvent(">> 系統：大腦晶片過載發熱。N-E +15"); } },
+        "電子香": { type: "use", name: "電子香", ascii: `    ||\n    ||\n   [==]\n   [==]`, desc: "構成數位祭拜的昂貴微處理晶片。需要在廟宇前使用才能發送算力封包。", effect: () => { logEvent(">> 系統：這東西必須在神明面前點燃才有意義。"); } },
+        "忠卦特許神經晶片": { type: "acc", name: "忠卦特許神經晶片", ascii: `   [####]\n   | CPU|\n   [####]`, desc: "合法的頂級晶片，能自動備份記憶並強化算力。\n\n功能：裝備後，駭入檢定難度降低。", effect: () => {} },
+        "忠卦高級防護裝甲": { type: "amr", name: "忠卦高級防護裝甲", ascii: `   /====\\\n  |  ||  |\n  |======|`, desc: "合法的防護塗層，抗打擊能力極強。\n\n功能：裝備後，戰鬥檢定難度大幅降低。", effect: () => {} },
+        "土製降壓電容": { type: "acc", name: "土製降壓電容", ascii: `    ||\n   (==)\n   (==)\n    ||`, desc: "黑客自己銲接的非法零件，容易短路。\n\n功能：裝備後，稍微提升科技檢定。", effect: () => {} },
+        "改裝切割熱刀": { type: "wpn", name: "改裝切割熱刀", ascii: `      /|\n  ===| |\n      \\|`, desc: "由工業切削機改造的致命武器，刃口發出高溫紅光。\n\n功能：裝備後，肉搏傷害與判定大幅提升。", effect: () => {} },
+        "過載的電路夾子": { type: "wpn", name: "過載的電路夾子", ascii: `   /=\\\n   \\=/`, desc: "從廢料堆撿來的短路鐵夾。\n\n功能：裝備後，勉強能當成防身武器。", effect: () => {} },
+        "亮銀八卦項鍊": { type: "acc", name: "亮銀八卦項鍊", ascii: `    /\\\n  < @@ >\n    \\/`, desc: "純手工拋光的民俗飾品，能引起某些迷信底層人的共鳴。\n\n功能：裝備後，口才交涉難度大幅減半。", effect: () => {} },
+        "特級雙子星檳榔": { type: "use", name: "特級雙子星檳榔", ascii: `  [***]\n  [***]`, desc: "能讓神經極度亢奮的化學物質。\n\n功能：SAN +5，VIT -5。", effect: () => { gameState.san = Math.min(100, gameState.san + 5); gameState.hp = Math.max(0, gameState.hp - 5); logEvent(">> 系統：吐出血紅的汁液。SAN +5, VIT -5"); } },
+        "菱洲宮伺服器鑰匙": { type: "read", name: "菱洲宮伺服器鑰匙", ascii: `   O-===\n   |  ||`, desc: "上面刻有周龍幫標誌的物理密碼鑰匙，能打開通往地下室的防爆門。", effect: () => { logEvent(">> 系統：這是一把鑰匙，只能用來開門。"); } }
+    };
+
+    // 🎯 核心修復：這就是導致駭入與小混混功能壞掉的關鍵函式，現在完美恢復！
+    function rollDice(modifier, target, statName) {
+        let r = Math.floor(Math.random() * 20) + 1;
+        let total = r + modifier;
+        let success = total >= target;
+        let resultText = success ? "【成功】" : "【失敗】";
+        logEvent(`<span class="log-dice">🎲 系統檢定 [${statName}]: 擲骰 1d20(${r}) + 補正(${modifier}) = ${total} ＞ 目標難度(${target}) ... ${resultText}</span>`);
+        return success;
+    }
+
+    function changeInvTab(tabName) {
+        playClickSound(); currentInvTab = tabName; currentEquipSubTab = null;
+        document.getElementById('tab-items').classList.toggle('active', tabName === 'items');
+        document.getElementById('tab-equip').classList.toggle('active', tabName === 'equip');
+        updateUIOnly();
+    }
+
+    function setEquipSubTab(tab) {
+        playClickSound(); currentEquipSubTab = tab; updateUIOnly();
+    }
+    
+    function formatDialogue(text) { 
+        return text.replace(/\[OS_KERNEL\]/g, '<span class="log-os"><b>[OS_核心邏輯]</b></span>')
+                   .replace(/\[SUPEREGO\]/g, '<span class="log-super"><b>[超我_社會歸化]</b></span>')
+                   .replace(/\[ID_GHOST\]/g, '<span class="log-id"><b>[本我_深層渴望]</b></span>'); 
+    }
+
+    let selectedItemName = null;
+    function examineItem(itemName) {
+        playClickSound(); selectedItemName = itemName; const item = ITEM_DB[itemName]; if (!item) return;
+        document.getElementById('detail-title').innerText = `== INFO: ${item.name} ==`;
+        document.getElementById('item-ascii-display').innerText = item.ascii || "[NO_IMAGE]";
+        document.getElementById('detail-desc').innerText = item.desc || "";
+        
+        let actionBtn = document.getElementById('item-action-btn');
+        if (item.type === "use" || item.type === "read") { 
+            actionBtn.innerText = "[ 使用 ]";
+            actionBtn.style.display = 'inline-block'; 
+        } else if (item.type === "wpn" || item.type === "amr" || item.type === "acc") {
+            let isEquipped = (gameState.equippedWpn === itemName || gameState.equippedAmr === itemName || gameState.equippedAcc === itemName);
+            actionBtn.innerText = isEquipped ? "[ 卸下 ]" : "[ 穿戴 ]";
+            actionBtn.style.display = 'inline-block';
+        } else { actionBtn.style.display = 'none'; }
+        togglePanel('item-detail');
+    }
+
+    function confirmInteractItem() {
+        playClickSound(); if (!selectedItemName) return; const item = ITEM_DB[selectedItemName];
+        if (!item) return;
+        if (item.type === "use" || item.type === "read") {
+            item.effect();
+            if (item.type === "use" && selectedItemName !== "電子香") { 
+                const idx = gameState.inventory.indexOf(selectedItemName); 
+                if (idx > -1) gameState.inventory.splice(idx, 1); 
+            }
+        } else if (item.type === "wpn") {
+            if (gameState.equippedWpn === selectedItemName) { gameState.equippedWpn = "UNARMED"; logEvent(">> 系統：卸下了武器。"); }
+            else { gameState.equippedWpn = selectedItemName; logEvent(`>> 系統：裝備了武器 [${selectedItemName}]。`); }
+        } else if (item.type === "amr") {
+            if (gameState.equippedAmr === selectedItemName) { gameState.equippedAmr = "NONE"; logEvent(">> 系統：卸下了防具。"); }
+            else { gameState.equippedAmr = selectedItemName; logEvent(`>> 系統：裝備了防具 [${selectedItemName}]。`); }
+        } else if (item.type === "acc") {
+            if (gameState.equippedAcc === selectedItemName) { gameState.equippedAcc = "NONE"; logEvent(">> 系統：卸下了飾品。"); }
+            else { gameState.equippedAcc = selectedItemName; logEvent(`>> 系統：裝備了飾品 [${selectedItemName}]。`); }
+        }
+        selectedItemName = null; togglePanel('status'); updateUIOnly();
+    }
+
+    function updatePortrait(asciiArt, name) {
+        let p = document.getElementById('portrait-ascii'); p.innerText = asciiArt; p.style.visibility = 'visible';
+        document.getElementById('unit-name').innerText = name;
+    }
+
+    function updateUIOnly() {
+        const currentStep = document.getElementById('options-container').getAttribute('data-step');
+        if (currentStep && (currentStep.startsWith('death_') || currentStep.startsWith('ending_') || currentStep.startsWith('boss_deal_ending'))) return; 
+
+        if (gameState.hp !== null && gameState.hp <= 0) { gameState.hp = null; setTimeout(() => { renderStep('death_hp'); }, 50); return; }
+        if (gameState.scs !== null && gameState.scs <= 0) { gameState.scs = null; setTimeout(() => { renderStep('death_scs'); }, 50); return; }
+
+        document.getElementById('hp-val').innerText = (gameState.hp === null) ? "??" : gameState.hp; 
+        document.getElementById('en-val').innerText = (gameState.en === null) ? "??" : gameState.en; 
+        document.getElementById('san-val').innerText = (gameState.san === null) ? "??" : gameState.san; 
+        document.getElementById('money-val').innerText = (gameState.credits === null) ? "??" : gameState.credits; 
+        document.getElementById('scs-val').innerText = (gameState.scs === null) ? "??" : gameState.scs;
+        
+        const invContainer = document.getElementById('inv-grid-container'); 
+        invContainer.innerHTML = '';
+        
+        if (currentInvTab === 'items') {
+            let filteredItems = gameState.inventory.filter(itemName => {
+                let type = ITEM_DB[itemName]?.type;
+                return type === 'use' || type === 'read';
+            });
+            if (filteredItems.length === 0) { 
+                invContainer.innerHTML = '<span style="color:rgba(255, 170, 0, 0.3); font-size:10px;">背包空無一物</span>'; 
+            } else { 
+                filteredItems.forEach(itemName => { 
+                    const btn = document.createElement('button'); btn.className = 'inv-item-btn'; 
+                    btn.innerText = `[${itemName}]`; btn.onclick = () => examineItem(itemName); invContainer.appendChild(btn); 
+                }); 
+            }
+        } else if (currentInvTab === 'equip') {
+            let wpnName = gameState.equippedWpn !== "UNARMED" ? gameState.equippedWpn : "空手";
+            let amrName = gameState.equippedAmr !== "NONE" ? gameState.equippedAmr : "無";
+            let accName = gameState.equippedAcc !== "NONE" ? gameState.equippedAcc : "無";
+
+            invContainer.innerHTML = `
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; width:100%; margin-bottom:5px;">
+                    <button class="cmd-btn ${currentEquipSubTab === 'wpn' ? 'border-amber-400 bg-amber-950/30' : ''}" style="padding:6px 2px; font-size:11px; text-align:center; display:flex; flex-direction:column; align-items:center;" onclick="setEquipSubTab('wpn')">
+                        <span style="font-size:10px; opacity:0.6;">武器</span>
+                        <span style="font-size:11px; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;" class="text-white">${wpnName}</span>
+                    </button>
+                    <button class="cmd-btn ${currentEquipSubTab === 'amr' ? 'border-amber-400 bg-amber-950/30' : ''}" style="padding:6px 2px; font-size:11px; text-align:center; display:flex; flex-direction:column; align-items:center;" onclick="setEquipSubTab('amr')">
+                        <span style="font-size:10px; opacity:0.6;">防具</span>
+                        <span style="font-size:11px; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;" class="text-white">${amrName}</span>
+                    </button>
+                    <button class="cmd-btn ${currentEquipSubTab === 'acc' ? 'border-amber-400 bg-amber-950/30' : ''}" style="padding:6px 2px; font-size:11px; text-align:center; display:flex; flex-direction:column; align-items:center;" onclick="setEquipSubTab('acc')">
+                        <span style="font-size:10px; opacity:0.6;">飾品</span>
+                        <span style="font-size:11px; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;" class="text-white">${accName}</span>
+                    </button>
+                </div>
+                <div id="sub-equip-container" style="display:flex; flex-wrap:wrap; gap:4px; width:100%;"></div>
+            `;
+
+            if (currentEquipSubTab) {
+                const subBox = document.getElementById('sub-equip-container');
+                let equips = gameState.inventory.filter(itemName => ITEM_DB[itemName]?.type === currentEquipSubTab);
+                if (equips.length === 0) {
+                    subBox.innerHTML = '<span style="color:rgba(255,170,0,0.3); font-size:10px;">沒有可用的裝備</span>';
+                } else {
+                    equips.forEach(itemName => {
+                        const btn = document.createElement('button'); btn.className = 'inv-item-btn'; 
+                        let isEq = (gameState.equippedWpn === itemName || gameState.equippedAmr === itemName || gameState.equippedAcc === itemName);
+                        btn.innerText = isEq ? `★[${itemName}]` : `[${itemName}]`;
+                        btn.onclick = () => examineItem(itemName);
+                        subBox.appendChild(btn);
+                    });
+                }
+            }
+        }
+    }
+
+    const scriptTree = {
+        start: {
+            scene_view: "room", portrait: ART.player, speaker: "CITIZEN // UNKNOWN",
+            text: "開機協定載入中。視覺分層緩慢重疊。\n\n你在一間極其狹窄、天花板生滿壁癌的非法隔離套房醒來。大腦一片空白，所有的長期記憶像是被強行用強磁鐵刮除過一樣，只剩下嚴重的耳鳴、空洞與難忍的飢餓嘔吐感。\n\n[OS_KERNEL]：警告：核心記憶體毀損。未檢測到合法的公民晶片簽章。\n\n[ID_GHOST]：唔...好痛苦...渾身都不舒服，胃部空空的像是要燒起來了。先翻翻這個鬼地方有沒有什麼可以活命的東西！\n\n[SUPEREGO]：身為堂堂有尊嚴的中華子民，哪怕是在最陰暗的垃圾堆醒來，也該衣冠整齊，整理儀容！體面！那是尊嚴！",
+            options: [ 
+                { text: "> 翻箱倒櫃，搜查地上的廢棄電子垃圾與床墊...", nextStep: "examine_room" },
+                { text: "> 走向旁邊那面破碎的鍍膜鏡子進行「發呆與思考」...", nextStep: "look_mirror" },
+                { text: "> 不管了，忍著噁心感，直接推開生鏽鐵門走向街道...", nextStep: "step_out" } 
+            ]
+        },
+        examine_room: {
+            scene_view: "room", portrait: ART.player, speaker: "CITIZEN // UNKNOWN",
+            effect: () => {
+                if(!gameState.inventory.includes("半瓶生理鹽水")) gameState.inventory.push("半瓶生理鹽水");
+                if(!gameState.inventory.includes("過載的電路夾子")) gameState.inventory.push("過載的電路夾子");
+            },
+            text: () => {
+                return "你忍著噁心感，蹲下身在滿是油漬與電路廢棄物的床底摸索。\n\n[OS_KERNEL]：掃描到有機殘留物。偵測到工業靜電釋放源。\n\n[ID_GHOST]：哈哈！有黃色的液體，快喝下去解渴！還有個大鐵夾，這玩意砸在別人腦袋上一定能發出好聽的聲音！\n\n[SUPEREGO]：在床底下撿別人剩下的垃圾，成何體統？但...為了生存，孔子說『君子不器』，暫且收下吧。";
+            },
+            options: [ { text: "> 很好，收起這些東西，轉身回到房間中央...", nextStep: "start" } ]
+        },
+        look_mirror: {
+            scene_view: "room", portrait: ART.player, speaker: "CITIZEN // UNKNOWN",
+            text: "你走到鏡子前，看著鏡子中那具殘破的軀殼。太陽穴上暴露出粗糙的散熱電阻，瞳孔裡是泛著幽藍光暈的雜牌義眼。\n\n[OS_KERNEL]：診斷：瞳孔對焦延遲。散熱系統效率低於12%。\n\n[SUPEREGO]：多麼端正的漢子啊！即使成了機器，也看得出眉宇間隱含的溫良恭儉讓。\n\n[ID_GHOST]：這雙眼睛看起來就像隨時要短路爆炸的劣質爆竹。你到底是個什麼東西？",
+            options: [
+                { text: "> 「看著鏡子...我覺得自己簡直不像人。」", nextStep: "mirror_not_human" },
+                { text: "> 「...沒什麼感覺，只是一副皮囊罷了。」", nextStep: "mirror_no_feeling" },
+                { text: "> 「應該整理打理一下外觀，保持體面才行。」", nextStep: "mirror_clean_up" }
+            ]
+        },
+        mirror_not_human: {
+            scene_view: "room", portrait: ART.player, speaker: "CITIZEN // UNKNOWN",
+            effect: () => { gameState.san = Math.max(10, gameState.san - 15); gameState.originWeights.rat += 2; logEvent(">> 系統：存在主義焦慮令你的處理器發熱。SAN -15。"); },
+            text: () => "你看著鏡子中冰冷的鈦合金接縫與外露的紅光感測器，一股寒意直透腦髓。\n\n[ID_GHOST]：啊啊啊！這算什麼人？這是一堆拼湊出來的回收塑料和死肉！我們只是一具裝了腐爛內臟的廢鐵！\n\n[OS_KERNEL]：檢測到急劇的「合成精神解體協定（Synthetic Dissociation）」。硬體阻抗波動 30%。\n\n[SUPEREGO]：閉嘴！《孝經》有云：『身體髮膚，受之父母，不敢毀傷，孝之始也。』雖然這皮膚變成了仿生鍍膜，但忠義之心不滅！站直！別露出那種被格式化的窩囊表情！",
+            options: [ { text: "> 停止胡思亂想，回到房間中央...", nextStep: "start" } ]
+        },
+        mirror_no_feeling: {
+            scene_view: "room", portrait: ART.player, speaker: "CITIZEN // UNKNOWN",
+            effect: () => { gameState.san = Math.min(100, gameState.san + 5); gameState.originWeights.tech += 1; logEvent(">> 系統：虛無主義的麻木安撫了受損的神經。SAN +5。"); },
+            text: () => "你看著鏡中那具甚至有些泛青、帶著油漬的軀殼。毫無波動，毫無生氣。\n\n[OS_KERNEL]：分析：情感扁平化，抗壓緩衝器運作正常。神經突觸無過載危險。\n\n[ID_GHOST]：沒錯...感覺是給那些住在頂層的大企業少爺們玩的奢侈品。我們這種街頭垃圾，只要有能量、有肉吃就能動。管它是鐵是肉，能活著就行。\n\n[SUPEREGO]：哀莫大於心死...你竟然連最基本的羞恥與反省都喪失了？儒家所謂的『五常』在你身上真是一點痕跡都找不到了。悲哀啊！",
+            options: [ { text: "> 回到房間中央...", nextStep: "start" } ]
+        },
+        mirror_clean_up: {
+            scene_view: "room", portrait: ART.player, speaker: "CITIZEN // UNKNOWN",
+            effect: () => { gameState.scs = Math.min(100, gameState.scs + 5); gameState.originWeights.corp += 2; logEvent(">> 系統：社會規訓自適應載入。社會信用 SCS +5。"); },
+            text: () => "你抬起機械手臂，用力拍了拍夾克上的灰塵，並試圖用手指將散亂的仿生頭髮往後梳理。雖然散熱片依然有些歪斜，但整體看起來整潔了些。\n\n[SUPEREGO]：太好了！這才是我中華文明薰陶出的儒雅之士！『君子正其衣冠，尊其瞻視。』哪怕口袋裡只剩下幾枚硬幣，我們臉上的體面就是我們的尊嚴！\n\n[ID_GHOST]：哈！虛偽的猴戲！在暗巷裡，那些混混只會看你的夾子夠不夠大、熱刀夠不夠燙，誰管你頭髮梳得像不像個企業公務員？",
+            options: [ { text: "> 整理完畢，回到房間中央...", nextStep: "start" } ]
+        },
+        step_out: {
+            scene_view: "dungeon", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => { 
+                let w = gameState.originWeights;
+                if (w.tech >= w.rat && w.tech >= w.corp) { gameState.finalOrigin = "科技浪人 (Cyber Runner)"; gameState.hp = 70; gameState.en = 50; gameState.san = 40; gameState.scs = 40; if(gameState.credits===null) gameState.credits=100; } 
+                else if (w.corp >= w.rat && w.corp >= w.tech) { gameState.finalOrigin = "企業脫逃者 (Corp Defector)"; gameState.hp = 60; gameState.en = 30; gameState.san = 50; gameState.scs = 85; if(gameState.credits===null) gameState.credits=300; } 
+                else { gameState.finalOrigin = "街頭流浪漢 (Street Rat)"; gameState.hp = 90; gameState.en = 20; gameState.san = 30; gameState.scs = 30; if(gameState.credits===null) gameState.credits=20; }
+                document.getElementById('rain-canvas').style.visibility = 'visible'; 
+                logEvent(">> 系統：社會監測上線。數值與背包已解鎖。"); 
+            },
+            text: () => {
+                return `你用力推開沉重的防爆鐵門。\n\n一股夾雜著化學酸雨與過期檳榔味的冰冷空氣瞬間灌入肺部。你站在【台南南區 - 菱洲冷卻暗巷】。上空是巨型企業高架管道，細密的酸雨如同發光的碎屑般落下。\n\n[OS_KERNEL]：身份校正：【${gameState.finalOrigin}】。\n\n[ID_GHOST]：哈...這條街上有這麼多招牌。我們去哪裡搞點吃的？\n\n[SUPEREGO]：聽著，人在街頭，一定要遵守禮法。社會信用（SCS）是我們立足的牌坊，若歸零，你將被天網無情格式化！`;
+            },
+            options: [ { text: "> 步入街頭，開始用向量羅盤進行導航...", nextStep: "street_hub" } ]
+        },
+        street_hub: {
+            scene_view: "dungeon", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            text: () => {
+                const bickers = [
+                    "[OS_KERNEL]：掃描周邊環境...無安全庇護所。\n[ID_GHOST]：到底要去哪？我快瘋了！\n[SUPEREGO]：冷靜，君子不立於危牆之下，仔細尋找線索。",
+                    "[ID_GHOST]：去搶劫！去破壞！\n[SUPEREGO]：成何體統！收起你那野蠻的念頭！\n[OS_KERNEL]：內分泌系統紊亂中，建議補充糖分。",
+                    "[SUPEREGO]：這條街烏煙瘴氣，簡直有辱斯文。\n[ID_GHOST]：少囉嗦，我聞到了血與機油的味道，真讓人興奮。\n[OS_KERNEL]：聽覺接收器過濾掉 85% 噪音。請指示下一步導航。"
+                ];
+                const randBicker = bickers[Math.floor(Math.random() * bickers.length)];
+                return `霓虹燈管發出微弱的嗡嗡聲，你失去了過去的記憶。\n你必須透過下方的向量操控面板在 3D 走廊中移動。\n\n多去和街上的人打聽「這裡是哪裡？現在是什麼時候？」也許你能慢慢拼湊出這條街背後的陰謀。\n\n${randBicker}`;
+            },
+            options: [
+                { text: "[ 往前移動 ] (走廊移動)", action: () => playerMove() },
+                { text: "[ 向左旋轉 ↺ ]", action: () => playerTurn('left') },
+                { text: "[ 向右旋轉 ↻ ]", action: () => playerTurn('right') }
+            ]
+        },
+
+        // --- 隨機遭遇事件 ---
+        encounter_salaryman: {
+            scene_view: "dungeon", portrait: ART.salaryman, speaker: "NPC // 平凡的上班族",
+            text: "你在空蕩的走廊轉角，撞見一個穿著發光西裝、提著公事包的上班族。他看起來神經緊繃，頭上還印著企業的條碼。\n\n你摸著疼痛的腦袋開口：「喂...這裡是哪裡？現在是什麼時候？」\n上班族嚇了一跳，抱緊公事包：「別、別殺我！我只是個底層社畜！這裡是菱洲暗巷啊...現在是2126年！求你別搶我的企業幣！」\n\n[OS_KERNEL]：掃描：目標微弱的反抗能力，資產轉移成功率高。\n\n[ID_GHOST]：看他那懦弱的樣子！他口袋裡一定有錢！揍他一拳，把他的晶片挖出來！\n\n[SUPEREGO]：非禮勿動！我們是文明人，豈可趁人之危行搶盜之事？",
+            options: [
+                { text: "> 「算了，你走吧。」 (展現仁義，SCS +5)", nextStep: "salaryman_leave" },
+                { text: "> 「少廢話，把錢交出來！」 (暴力勒索，難度 10)", nextStep: "salaryman_extort" }
+            ]
+        },
+        salaryman_leave: {
+            scene_view: "dungeon", portrait: ART.salaryman, speaker: "NPC // 平凡的上班族",
+            effect: () => { gameState.scs = Math.min(100, gameState.scs + 5); },
+            text: () => "「謝、謝謝大哥！」上班族連滾帶爬地逃進了雨中。\n\n[SUPEREGO]：善哉善哉。不欺暗室，不淩弱小，此乃君子之風。\n\n社會信用 [SCS] 提升了 5 點。",
+            options: [ { text: "> 繼續在街頭探索...", nextStep: "street_hub" } ]
+        },
+        salaryman_extort: {
+            scene_view: "dungeon", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => {
+                gameState.temp_success = rollDice(0, 10, "肉搏/威嚇");
+                if (gameState.temp_success) {
+                    gameState.credits += 40; gameState.scs = Math.max(0, gameState.scs - 15);
+                } else {
+                    gameState.hp = Math.max(0, gameState.hp - 10);
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) {
+                    return "你一把揪住他的領子，將他重重抵在牆上。他嚇得尿了褲子，顫抖著把 40 企業幣轉入你的帳戶。\n「滾！」你冷冷地說。他連滾帶爬地跑了。\n\n[SCS 社會信用降低 15，獲得 40 企業幣]";
+                } else {
+                    return "你試圖威嚇他，但他突然從公事包裡掏出一把高壓防狼電擊棒，狠狠捅在你的腰上！「救命啊！有強盜！」他尖叫著逃跑了。\n你痛得倒在地上喘息。 VIT -10。";
+                }
+            },
+            options: [ { text: "> 該死...繼續探索...", nextStep: "street_hub" } ]
+        },
+        encounter_homeless: {
+            scene_view: "dungeon", portrait: ART.homeless, speaker: "NPC // 落魄的街友",
+            text: "一個滿身惡臭、義體嚴重破損外露的街友縮在通風管旁。他嘴裡唸唸有詞：「娘娘在看著...算力被抽走了...大天后宮是假的...」\n\n你靠近他：「老兄...你還好嗎？那間廟是怎麼回事？」\n\n街友猛地抬頭，滿佈血絲的眼睛盯著你：「他們在吃人！福寶和周龍幫...用電子香抽乾你的腦髓！別去拜拜！別去！」\n\n[OS_KERNEL]：警告：對方攜帶未知生化病毒，建議保持 1.5 米距離。\n\n[ID_GHOST]：這傢伙比我們還臭！快離他遠點，免得染上電子梅毒！\n\n[SUPEREGO]：惻隱之心人皆有之，可憐可憐他吧。",
+            options: [
+                { text: "> 「聽起來瘋瘋癲癲的，還是走吧。」", nextStep: "street_hub" },
+                { text: "> 給他一點 10 企業幣買吃的 (如果你有錢)", nextStep: "homeless_give" }
+            ]
+        },
+        homeless_give: {
+            scene_view: "dungeon", portrait: ART.homeless, speaker: "NPC // 落魄的街友",
+            effect: () => {
+                if (gameState.credits >= 10) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 10; gameState.scs = Math.min(100, gameState.scs + 10);
+                    gameState.knowsTempleSecret = true; 
+                } else {
+                    gameState.temp_success = false;
+                }
+            },
+            text: () => {
+                if (!gameState.temp_success) return "你摸了摸口袋，連10塊錢都沒有。「我自己也是個窮光蛋啊...」你苦笑。";
+                return "你轉了 10 企業幣給他的破爛晶片。街友愣住了，渾濁的眼裡流下淚水：「好人...好人啊...聽我說，去廟裡拜拜的時候，別看娘娘的眼睛...鑰匙在嚼檳榔的那群人手裡...」\n\n社會信用 [SCS] 提升了 10 點。你獲得了一條情報。";
+            },
+            options: [ { text: "> 繼續在街頭探索...", nextStep: "street_hub" } ]
+        },
+
+        // --- 商店與地點 ---
+        goto_ponytwo: {
+            scene_view: "store", portrait: ART.clerk, speaker: "AI // 超商收銀端",
+            text: "自動玻璃門打開，店內蒼白的日光燈晃得你眼睛發酸。\n『歡迎光臨芃貳超商。請及時更新您的信用簽章。』\n\n你拍了拍機器人的櫃檯：「喂，鐵皮腦袋，這裡是哪裡？現在是哪一年？」\n機器人毫無感情地回答：『這裡是南區 87 巷門市。當前為福寶集團曆 2126 年。需要購買商品嗎？』\n\n[OS_KERNEL]：偵測到商業交易節點。警告：該區域監控級別極高。\n[ID_GHOST]：餓死我了！架子上那些螢光綠色的水看起來很好喝！砸碎玻璃搶過來！\n[SUPEREGO]：胡鬧！『非己之物，不可苟取』。堂堂正正交易才是王道！",
+            options: [
+                { text: "> 購買「芃貳功能飲料」 (15 企業幣)", nextStep: "ponytwo_buy_drink" },
+                { text: "> 購買「電子香」 (30 企業幣)", nextStep: "ponytwo_buy_incense" },
+                { text: "> 嘗試駭入收銀終端竊取飲料 (需 科技 10)", nextStep: "ponytwo_steal" },
+                { text: "> [ 離開超商，退回街頭 ]", nextStep: "street_hub" }
+            ]
+        },
+        ponytwo_buy_drink: {
+            scene_view: "store", portrait: ART.clerk, speaker: "AI // 超商收銀端",
+            effect: () => {
+                if (gameState.credits >= 15) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 15; gameState.inventory.push("芃貳功能飲料");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return ">> 系統：餘額不足。自動收銀機發出警告音：『窮鬼公民，請勿觸摸商品。』";
+                return "交易成功。你拿到了「芃貳功能飲料」。";
+            },
+            options: [ { text: "> [ 繼續購物 ]", nextStep: "goto_ponytwo" }, { text: "> [ 離開超商，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        ponytwo_buy_incense: {
+            scene_view: "store", portrait: ART.clerk, speaker: "AI // 超商收銀端",
+            effect: () => {
+                if (gameState.credits >= 30) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 30; gameState.inventory.push("電子香");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return ">> 系統：餘額不足。自動收銀機發出警告音：『窮鬼公民，請勿觸摸商品。』";
+                return "交易成功。你拿到了昂貴的「電子香」。";
+            },
+            options: [ { text: "> [ 繼續購物 ]", nextStep: "goto_ponytwo" }, { text: "> [ 離開超商，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        ponytwo_steal: {
+            scene_view: "store", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => {
+                gameState.temp_success = rollDice(3, 10, "科技/駭入");
+                if (gameState.temp_success) {
+                    gameState.inventory.push("芃貳功能飲料");
+                } else {
+                    gameState.hp = Math.max(0, gameState.hp - 15);
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) {
+                    return "你短路了防盜節點，順手將功能飲料塞進了夾克裡！";
+                } else {
+                    return "防盜雷射瞬間變成刺眼的血紅色！一股高壓電擊彈到你身上。 VIT -15！";
+                }
+            },
+            options: [ { text: "> [ 繼續購物 ]", nextStep: "goto_ponytwo" }, { text: "> [ 逃離超商，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        goto_stall: {
+            scene_view: "stall", portrait: ART.oldman, speaker: "NPC // 蝦捲攤老伯",
+            text: "油鍋裡滋滋作響，招牌寫著「仿製蝦捲」。裝著生鏽機械手臂的老頭抽著電子菸：『少年仔，來一盤嗎？ 20 企業幣啦。』\n\n你摸著頭痛的腦袋：「老伯...這裡是哪裡？現在是什麼時候？」\n老頭看了你一眼：『少年仔，撞壞腦袋啦？這裡是南區冷卻暗巷，2126年啦。要不要吃點東西補補腦？』\n\n[OS_KERNEL]：分析：劣質混合蛋白。含有重金屬與未知的寄生蟲卵。\n[ID_GHOST]：管他什麼蟲卵，油炸過後都是高熱量！快給我吞下去！\n[SUPEREGO]：嗟來之食尚且不可，何況是這種路邊的不潔之物？但...咕嚕...也只能委屈一下了。",
+            options: [
+                { text: "> 花費 20 企業幣，買一盤仿蝦捲", nextStep: "stall_eat" },
+                { text: "> 「這條街怎麼都沒人？那間大廟是怎麼回事？」", nextStep: "stall_ask" },
+                { text: "> [ 離開攤位，退回街頭 ]", nextStep: "street_hub" }
+            ]
+        },
+        stall_eat: {
+            scene_view: "stall", portrait: ART.oldman, speaker: "NPC // 蝦捲攤老伯",
+            effect: () => {
+                if (gameState.credits >= 20) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 20; gameState.inventory.push("電子仿肉蝦捲");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "老頭瞥了一眼你的餘額：『少年仔，不賒帳的喔。』";
+                return "老頭將熱騰騰的炸物遞給你：『趁熱吃，這年頭合成肉比乾淨水源還便宜。』";
+            },
+            options: [ { text: "> [ 繼續留在攤位前 ]", nextStep: "goto_stall" }, { text: "> [ 離開攤位，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        stall_ask: {
+            scene_view: "stall", portrait: ART.oldman, speaker: "NPC // 蝦捲攤老伯",
+            effect: () => { gameState.knowsTempleSecret = true; }, 
+            text: () => "老頭壓低聲音：『少管閒事...自從福寶集團與周龍幫接管地下室後，廟裡的「電子香」就變成了吸血代碼。信徒一上香，腦內的算力就會被偷偷劫持。黑幫的「阿東」就在地下機房看守著。』",
+            options: [ { text: "> [ 繼續留在攤位前 ]", nextStep: "goto_stall" }, { text: "> [ 離開攤位，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        goto_zhonggua: {
+            scene_view: "corporate", portrait: ART.zhonggua, speaker: "SYS // 忠卦客服終端",
+            text: "你走進充滿高級冷光的「忠卦電子」。\n你詢問機器人客服：「喂，我是誰？這是哪？」\n機器人冰冷回應：『我們不提供記憶尋回服務，但我們販售頂級神經晶片與防護裝甲，隨時備份您未來的記憶。』\n\n[OS_KERNEL]：警告：該公司硬體存在後門，會偷偷向政府回傳市民的日常記憶。\n[SUPEREGO]：聽話！政府特許的一定是好東西！吃點虧換得安穩，這叫『順從天命』！\n[ID_GHOST]：滾！我死也不會把腦袋交給官僚去備份！",
+            options: [
+                { text: "> 購買「忠卦特許神經晶片」 (240 企業幣)", nextStep: "zg_buy_chip" },
+                { text: "> 購買「忠卦高級防護裝甲」 (230 企業幣)", nextStep: "zg_buy_armor" },
+                { text: "> [ 離開忠卦電子，回到街頭 ]", nextStep: "street_hub" }
+            ]
+        },
+        zg_buy_chip: {
+            scene_view: "corporate", portrait: ART.zhonggua,
+            effect: () => {
+                if (gameState.credits >= 240) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 240; gameState.inventory.push("忠卦特許神經晶片");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "『信用餘額評估不足。無法授權此購買協定。』";
+                return "交易成功。獲得「忠卦特許神經晶片」。";
+            },
+            options: [ { text: "> [ 繼續瀏覽商品 ]", nextStep: "goto_zhonggua" }, { text: "> [ 離開商店，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        zg_buy_armor: {
+            scene_view: "corporate", portrait: ART.zhonggua,
+            effect: () => {
+                if (gameState.credits >= 230) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 230; gameState.inventory.push("忠卦高級防護裝甲");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "『信用餘額評估不足。無法授權此購買協定。』";
+                return "交易成功。獲得「忠卦高級防護裝甲」。";
+            },
+            options: [ { text: "> [ 繼續瀏覽商品 ]", nextStep: "goto_zhonggua" }, { text: "> [ 離開商店，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        goto_diy_shop: {
+            scene_view: "diy", portrait: ART.cybertech, speaker: "NPC // 改造狂人 歪哥",
+            text: "一個眼眶裡接著光學放大鏡的黑客在一堆裸露的排線上接線：\n『唷，新來的？失憶啦？正常，被福寶集團洗腦過的人都這樣。我這裡只有自己銲接的非法好貨。要來點什麼？』\n\n[OS_KERNEL]：警告：該商店內的硬體未經天網認證，裝備有引發腦部燃燒之風險。\n[ID_GHOST]：哈哈哈！這才是我們該來的地方！越危險的傢伙火力越猛！\n[SUPEREGO]：與這種化外之民交易，有損名聲。還是盡快離去為妙。",
+            options: [
+                { text: "> 買「土製降壓電容」 (40 企業幣)", nextStep: "diy_buy_cap" },
+                { text: "> 買「改裝切割熱刀」 (80 企業幣)", nextStep: "diy_buy_knife" },
+                { text: "> 買「亮銀八卦項鍊」 (50 企業幣)", nextStep: "diy_buy_necklace" },
+                { text: "> [ 離開黑客店，回到街頭 ]", nextStep: "street_hub" }
+            ]
+        },
+        diy_buy_cap: {
+            scene_view: "diy", portrait: ART.cybertech,
+            effect: () => {
+                if (gameState.credits >= 40) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 40; gameState.inventory.push("土製降壓電容");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "『沒錢別來我這沾光。』";
+                return "獲得「土製降壓電容」。";
+            },
+            options: [ { text: "> [ 繼續購物 ]", nextStep: "goto_diy_shop" }, { text: "> [ 離開商店，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        diy_buy_knife: {
+            scene_view: "diy", portrait: ART.cybertech,
+            effect: () => {
+                if (gameState.credits >= 80) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 80; gameState.inventory.push("改裝切割熱刀");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "『沒 80 企業幣免談。』";
+                return "獲得「改裝切割熱刀」。";
+            },
+            options: [ { text: "> [ 繼續購物 ]", nextStep: "goto_diy_shop" }, { text: "> [ 離開商店，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        diy_buy_necklace: {
+            scene_view: "diy", portrait: ART.cybertech,
+            effect: () => {
+                if (gameState.credits >= 50) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 50; gameState.inventory.push("亮銀八卦項鍊");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "『少於 50 拿不走。』";
+                return "獲得「亮銀八卦項鍊」。";
+            },
+            options: [ { text: "> [ 繼續購物 ]", nextStep: "goto_diy_shop" }, { text: "> [ 離開商店，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        goto_wowolun: {
+            scene_view: "cars", portrait: ART.wowolun, speaker: "AI // 車業銷售端",
+            text: "店門口擺著幾台散發發光霓虹線條的最新型電動重機「渦渦輪 V4」。\n\n[OS_KERNEL]：檢測到高階載具。保全系統等級：S。\n[ID_GHOST]：哇啊！那金屬野獸！摸摸它！騎上它！在雨中狂飆！\n[SUPEREGO]：這是虛榮！是萬惡的物質主義！看兩眼就好，別丟臉了。",
+            options: [
+                { text: "> 仔細觀賞這台重機 (SAN +10)", nextStep: "wowolun_look" },
+                { text: "> 嘗試對展示機進行「測試駕駛」駭入 (難度 18)", nextStep: "wowolun_hack" },
+                { text: "> [ 離開渦渦輪車業，回到街頭 ]", nextStep: "street_hub" }
+            ]
+        },
+        wowolun_look: {
+            scene_view: "cars", portrait: ART.player,
+            effect: () => { gameState.san = Math.min(100, gameState.san + 10); },
+            text: () => "你看著那精緻光滑的合金流線，純粹的美感讓疲憊的心靈得到了短暫的慰藉。 SAN +10。",
+            options: [ { text: "> [ 繼續留在車行前 ]", nextStep: "goto_wowolun" }, { text: "> [ 離開車行，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        wowolun_hack: {
+            scene_view: "cars", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => {
+                let modifier = (gameState.equippedAcc === "忠卦特許神經晶片" || gameState.equippedAcc === "土製降壓電容") ? 4 : 0;
+                gameState.temp_success = rollDice(modifier, 18, "超限科技/駭入");
+                if (gameState.temp_success) {
+                    gameState.credits = Math.min(999, gameState.credits + 300);
+                } else {
+                    gameState.hp = Math.max(0, gameState.hp - 30); gameState.scs = Math.max(0, gameState.scs - 20);
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) {
+                    return "幕後數據線侵入成功！悄悄轉了 300 企業幣！\n\n[ID_GHOST]：哈！看到了嗎？這些大企業的防護系統就像紙糊的一樣！";
+                } else {
+                    return "『檢測到非法入侵協定！』高溫雷射掃過你的肩膀！ VIT -30，社會信用 -20！\n\n[OS_KERNEL]：警告：身體受到高溫燒傷。建議立即撤退。";
+                }
+            },
+            options: [ { text: "> [ 繼續留在車行前 ]", nextStep: "goto_wowolun" }, { text: "> [ 離開車行，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        goto_betelnut: {
+            scene_view: "gangster", portrait: ART.taike, speaker: "NPC // 聯友會 檳榔豪哥",
+            text: "「雙子星檳榔」招牌下，三個嚼著檳榔的台客混混圍在廢棄油桶旁。\n『看三小？閃遠點！』\n你開口詢問：「不好意思......」\n混混眼神一變：『幹你娘是要幹嘛啦，找死是不是？』\n\n[OS_KERNEL]：偵測到幫派分子。武裝威脅度：中等。\n[ID_GHOST]：撕裂他們！把他們的生鏽紋身給卸下來！\n[SUPEREGO]：粗俗！動手是野蠻人的行徑。我們應該以理服人。\n\n攤位上擺著【特級雙子星檳榔】與散裝的【電子香】(售價：25)。",
+            options: () => {
+                let opts = [
+                    { text: "> 購買「特級雙子星檳榔」 (10 企業幣)", nextStep: "buy_betelnut" },
+                    { text: "> 購買一柱「電子香」 (25 企業幣)", nextStep: "buy_betelnut_incense" }
+                ];
+                if (gameState.knowsTempleSecret) {
+                    opts.push({ text: "> 「把菱洲宮地下機房的鑰匙老實交出來吧。」(準備戰鬥)", nextStep: "gang_fight" });
+                    opts.push({ text: "> 騙取鑰匙:「我是福寶集團派來的特約維護工程師...把鑰匙給我。」 (口才，難度 13)", nextStep: "gang_talk" });
+                }
+                opts.push({ text: "> [ 離開檳榔攤，回到街頭 ]", nextStep: "street_hub" });
+                return opts;
+            }
+        },
+        buy_betelnut: {
+            scene_view: "gangster", portrait: ART.taike,
+            effect: () => {
+                if (gameState.credits >= 10) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 10; gameState.inventory.push("特級雙子星檳榔");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "『滾！連十塊都沒有！』";
+                return "獲得「特級雙子星檳榔」。";
+            },
+            options: [ { text: "> [ 繼續留在檳榔攤 ]", nextStep: "goto_betelnut" }, { text: "> [ 離開檳榔攤，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        buy_betelnut_incense: {
+            scene_view: "gangster", portrait: ART.taike,
+            effect: () => {
+                if (gameState.credits >= 25) {
+                    gameState.temp_success = true;
+                    gameState.credits -= 25; gameState.inventory.push("電子香");
+                } else gameState.temp_success = false;
+            },
+            text: () => {
+                if (!gameState.temp_success) return "『沒錢還敢來求神拜佛？』";
+                return "獲得「電子香」。這電子香是從廟裡偷撈出來的。";
+            },
+            options: [ { text: "> [ 繼續留在檳榔攤 ]", nextStep: "goto_betelnut" }, { text: "> [ 離開檳榔攤，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        gang_fight: {
+            scene_view: "gangster", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => {
+                let modifier = 0;
+                if (gameState.equippedWpn === "改裝切割熱刀") modifier += 6;
+                else if (gameState.equippedWpn === "過載的電路夾子") modifier += 3;
+                gameState.temp_success = rollDice(modifier, 12, "肉搏/戰鬥");
+                if (gameState.temp_success) {
+                    gameState.hasKey = true; if(!gameState.inventory.includes("菱洲宮伺服器鑰匙")) gameState.inventory.push("菱洲宮伺服器鑰匙");
+                } else {
+                    gameState.hp = 0; 
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) {
+                    return "你搶先發難！精準地砸在混混的液壓關節上！你一把抓起掉在地上的【菱洲宮伺服器鑰匙】。\n\n[ID_GHOST]：聽見那美妙的骨裂聲了嗎？這就是街頭的法則！";
+                } else {
+                    return "三個嚼檳榔的台客比你想像的悍勇。一根實心鋼管狠狠砸在你腹部。你倒在血泊中...";
+                }
+            },
+            options: [ { text: "> 繼續...", nextStep: "street_hub" } ]
+        },
+        gang_talk: {
+            scene_view: "gangster", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => {
+                let targetDiff = (gameState.equippedAcc === "亮銀八卦項鍊") ? 7 : 13;
+                if (gameState.equippedAcc === "亮銀八卦項鍊") logEvent(">> [飾品]：『亮銀八卦項鍊』使混混精神鬆懈，難度大幅降低！");
+                gameState.temp_success = rollDice(3, targetDiff, "機智/口才");
+                if (gameState.temp_success) {
+                    gameState.hasKey = true; if(!gameState.inventory.includes("菱洲宮伺服器鑰匙")) gameState.inventory.push("菱洲宮伺服器鑰匙");
+                } else {
+                    gameState.hp = Math.max(0, gameState.hp - 35); 
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) {
+                    return "你擺出一副不耐煩的專業架勢：『我是福寶集團特約硬體工程師。大天后宮的神經網路主機出現了嚴重的邏輯溢出報錯，算力快要燒壞了。耽誤了高層的採礦分紅，你們負得起責任嗎？鑰匙給我！』\n\n混混被你的黑客黑話唬得一愣一愣，慌張地把鑰匙丟給你：『大、大哥真的假的啦？那你快去修！千萬別跟上面告狀喔！』\n\n[SUPEREGO]：兵不厭詐，善意的謊言也是為了天下蒼生。";
+                } else {
+                    return "『工程師個鬼啦！你身上連個工作證都沒有，穿得跟垃圾堆裡爬出來的一樣！想黑我們？打！』混混頭目一巴掌把你搧倒在積水裡。 VIT -35！";
+                }
+            },
+            options: [ { text: "> 繼續...", nextStep: "street_hub" } ]
+        },
+        goto_temple: {
+            scene_view: "temple", portrait: ART.mazu_deity, speaker: "MAZU // 數位大天后宮系統",
+            text: "廟前香火裊裊，一尊巨大的全息神像俯瞰著你。\n『信徒平安。燒香一柱，即可向神明發送解碼請求，並增加信用積點。』\n\n[OS_KERNEL]：偵測到異常高頻算力封包。此建築物為大型神經元採礦節點。\n[SUPEREGO]：天哪！快跪下！叩頭！哪怕是數位的，禮不可廢！\n[ID_GHOST]：它在向我的大腦發射採礦信號！這神明是假的！",
+            options: [
+                { text: "> 燒一柱「電子香」 (消耗能量 / 恢復社會信用)", nextStep: "pray_god" },
+                { text: "> 走入偏殿，嘗試開啟通往地下室的防爆鐵門", nextStep: "open_basement" },
+                { text: "> [ 離開廟宇，退回街頭 ]", nextStep: "street_hub" }
+            ]
+        },
+        pray_god: {
+            scene_view: "temple", portrait: ART.mazu_deity,
+            effect: () => {
+                if (gameState.inventory.includes("電子香") && gameState.en >= 15) {
+                    gameState.temp_success = true;
+                    gameState.en -= 15; gameState.scs = Math.min(100, gameState.scs + 15); gameState.usedIncense = true;
+                    gameState.inventory.splice(gameState.inventory.indexOf("電子香"), 1);
+                } else {
+                    gameState.temp_success = false;
+                }
+            },
+            text: () => {
+                if (!gameState.inventory.includes("電子香")) return "你身上沒有「電子香」。";
+                if (gameState.en < 15) return "你的晶片能量 [N-E] 低於 15，無法啟動電子香。請先補充能量。";
+                return "你點燃了「電子香」，發送出高頻算力封包。\n神像雙眼發出綠光：『此卦系統鎖死，因果演算溢位；香火已扣除算力不予歸還，無效對話不予除錯。...』\n[SCS 提升 15，N-E 損耗 15]";
+            },
+            options: [ { text: "> [ 繼續留在神殿前 ]", nextStep: "goto_temple" }, { text: "> [ 離開廟宇，退回街頭 ]", nextStep: "street_hub" } ]
+        },
+        open_basement: {
+            scene_view: "temple", portrait: ART.player,
+            text: () => {
+                if (!gameState.hasKey && !gameState.inventory.includes("菱洲宮伺服器鑰匙")) return "防爆鐵門上裝著一道密碼盤。你沒有對應的鑰匙，無法強行破壞。";
+                return "你掏出「菱洲宮伺服器鑰匙」插入插槽。大門緩慢分開，露出一道深不見底的向下通道。";
+            },
+            options: [
+                { text: () => (gameState.hasKey || gameState.inventory.includes("菱洲宮伺服器鑰匙")) ? "> 走入通道，進入地下伺服器核心" : "> 暫時退回廟殿", nextStep: () => (gameState.hasKey || gameState.inventory.includes("菱洲宮伺服器鑰匙")) ? "goto_basement" : "goto_temple" }
+            ]
+        },
+        goto_basement: {
+            scene_view: "basement", portrait: ART.ah_dong, speaker: "BOSS // 周龍幫 阿東",
+            text: "在無數排發光的伺服器前，帶著墨鏡、裝著紅光重型液壓鋼拳的男人冷笑了一聲：\n『你就是那個失憶 Scav？這家廟宇是我們與福寶集團的合夥網關，你現在要來擋財路？』\n\n[OS_KERNEL]：目標：周龍幫小組長。危險級別：高。\n[ID_GHOST]：撕裂他！碾碎他！\n[SUPEREGO]：得饒人處且饒人，如果能說服他，這豈不是『和氣生財』？",
+            options: [
+                { text: "> 「多說無益，決鬥吧！」 (肉搏，難度 14)", nextStep: "boss_fight" },
+                { text: "> 駭入網關主控台切斷安全協議 (駭入，難度 13)", nextStep: "boss_hack" },
+                { text: "> 「阿東，不如我們合作...」 (口才，難度 15)", nextStep: "boss_deal" }
+            ]
+        },
+        boss_fight: {
+            scene_view: "basement", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => {
+                let modifier = 0;
+                if (gameState.equippedWpn === "改裝切割熱刀") modifier += 6;
+                else if (gameState.equippedWpn === "過載的電路夾子") modifier += 3;
+                let targetDiff = (gameState.equippedAmr === "忠卦高級防護裝甲") ? 8 : 14;
+                if (gameState.equippedAmr === "忠卦高級防護裝甲") logEvent(">> [防具]：『忠卦高級防護裝甲』大幅抵銷了阿東的液壓拳擊，難度減半！");
+
+                gameState.temp_success = rollDice(modifier, targetDiff, "肉搏/戰鬥");
+                if (!gameState.temp_success) {
+                    gameState.hp = 0; 
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) return "你精準避開了阿東的右拳！割斷了他脖子上的散熱排線！你贏了！\n\n[ID_GHOST]：這就對了！鮮血與機油！我是無敵的！";
+                else return "阿東鋼拳快如閃電，巨大的液壓衝擊力將你擊飛！眼前的光學義眼信號徹底斷開...";
+            },
+            options: [ { text: () => (gameState.hp === null || gameState.hp <= 0) ? ">> 失去意識..." : ">> 走向伺服器主控台...", nextStep: () => (gameState.hp === null || gameState.hp <= 0) ? "death_hp" : "victory_choice" } ]
+        },
+        boss_hack: {
+            scene_view: "basement", portrait: ART.player, speaker: () => `CITIZEN // ${playerName}`,
+            effect: () => {
+                let modifier = (gameState.equippedAcc === "忠卦特許神經晶片") ? 4 : 0;
+                gameState.temp_success = rollDice(modifier, 13, "科技/駭入");
+                if (!gameState.temp_success) {
+                    gameState.hp = 0;
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) return "你向安全主機注入了溢出代碼！主冷卻塔瞬間逆流，凍結了阿東的機械手臂！\n\n[OS_KERNEL]：威脅排除。系統訪問權限已獲取。";
+                else return "控制台爆出了強烈的防駭反噬電湧！你頭部完全過載燒毀。";
+            },
+            options: [ { text: () => (gameState.hp === null || gameState.hp <= 0) ? ">> 失去意識..." : ">> 走向伺服器主控台...", nextStep: () => (gameState.hp === null || gameState.hp <= 0) ? "death_hp" : "victory_choice" } ]
+        },
+        boss_deal: {
+            scene_view: "basement", portrait: ART.ah_dong, speaker: "BOSS // 周龍幫 阿東",
+            effect: () => {
+                let targetDiff = (gameState.equippedAcc === "亮銀八卦項鍊") ? 8 : 15;
+                if (gameState.equippedAcc === "亮銀八卦項鍊") logEvent(">> [飾品]：『亮銀八卦項鍊』使阿東合作態度軟化，口才難度減半！");
+
+                gameState.temp_success = rollDice(2, targetDiff, "機智/口才");
+                if (!gameState.temp_success) {
+                    gameState.hp = 0; 
+                }
+            },
+            text: () => {
+                if (gameState.temp_success) return "你指著冷卻架：『背叛福寶，獲得真正的自由。』阿東熄滅了電子菸：『這條街以後我們平分！』\n\n[SUPEREGO]：化干戈為玉帛，此乃上兵伐謀也！";
+                else return "『少在那裡挑撥離間！』阿東一鋼拳砸碎了你的膝蓋，槍聲響起...";
+            },
+            options: [ { text: () => (gameState.hp === null || gameState.hp <= 0) ? ">> 失去意識..." : ">> 與阿東共同走向未來...", nextStep: () => (gameState.hp === null || gameState.hp <= 0) ? "death_hp" : "boss_deal_ending" } ]
+        },
+        boss_deal_ending: {
+            scene_view: "basement", portrait: ART.player,
+            text: "【結局分支 D：雙頭同盟的誕生】\n\n你們聯手做掉了福寶集團的無人機，將伺服器接入私人網路。廟宇的香火龐大代幣算力，如今正源源不絕地流入你們的個人帳戶。\n\n[ DEMO 完滿結束 ]",
+            options: [ { text: "> [ 重新啟動系統核心 ]", nextStep: "start_reset" } ]
+        },
+        victory_choice: {
+            scene_view: "basement", portrait: ART.player,
+            text: "主機正在高速抽取著整個台南南區百姓的神經元算力。\n你可以做出以下決定：",
+            options: [
+                { text: "> 1. 徹底破壞宮廟伺服器 (解放南區算力)", nextStep: "ending_destroy" },
+                { text: "> 2. 取代阿東成為新的幫派組長 (掌控算力與財富)", nextStep: "ending_corrupt" }
+            ]
+        },
+        ending_destroy: {
+            scene_view: "scrap", portrait: ART.player,
+            text: "【結局分支 A：暗巷的反擊與解放】\n\n你狠狠砸碎了冷卻玻璃鋼與主板！主機瞬間化為一團濃煙。籠罩在天空的陰霾終於散去。你雖然依然失憶，但你贏回了這條街道的尊嚴。\n\n[ DEMO 體驗結束。感謝遊玩！ ]",
+            options: [ { text: "> [ 重新啟動系統核心 ]", nextStep: "start_reset" } ]
+        },
+        ending_corrupt: {
+            scene_view: "basement", portrait: ART.player,
+            text: "【結局分支 B：新紀元霸主】\n\n你冷靜地修改了伺服器的出幣終端密鑰，將其重新綁定到了你大腦的新晶片上。從今天起，信徒們依然會虔誠叩拜。而你，將成為這座迷宮背後冷酷的主導神明。\n\n[ DEMO 體驗結束。感謝遊玩！ ]",
+            options: [ { text: "> [ 重新啟動系統核心 ]", nextStep: "start_reset" } ]
+        },
+        death_hp: {
+            scene_view: "scrap", portrait: ART.player,
+            text: "【終局：肉體功能崩潰 · 慘死路邊沒人在乎】\n\n[OS_KERNEL]：致命性錯誤：VIT 降至 0。生命特徵消失。\n[SUPEREGO]：這也太難看了吧！連一塊像樣的裹屍布都沒有！\n\n你的代碼與記憶徹底消逝在賽博空洞的雨中。",
+            options: [ { text: "> [ 重啟大腦系統核心 ]", nextStep: "start_reset" } ]
+        },
+        death_scs: {
+            scene_view: "scrap", portrait: ART.player,
+            text: "【終局：信用度破產 · 天網人道格式化】\n\n[OS_KERNEL]：致命性錯誤：SCS 降至 0。執行市民身份自動人道註銷。\n[ID_GHOST]：別、別格式化我！\n\n天網無人機的高溫激光射穿了你的散熱格柵，你的腦部記憶體被無情格式化。你像垃圾一樣癱軟在路邊。",
+            options: [ { text: "> [ 重啟大腦系統核心 ]", nextStep: "start_reset" } ]
+        }
+    };
+
+    const logContainer = document.getElementById('story-log-container');
+    function logEvent(msg) { 
+        const newEntry = document.createElement('div'); newEntry.className = 'log-entry'; newEntry.innerHTML = msg; 
+        logContainer.appendChild(newEntry); logContainer.scrollTop = logContainer.scrollHeight; 
+    }
+
+    function renderStep(stepKey) {
+        if (stepKey === "start_reset") {
+            gameState = { hp: null, en: null, san: null, scs: null, credits: null, inventory: ["過期健保卡"], equippedWpn: "UNARMED", equippedAmr: "NONE", equippedAcc: "NONE", originWeights: { rat: 0, tech: 0, corp: 0 }, finalOrigin: "未定義", hasKey: false, usedIncense: false, encSalaryman: false, encHomeless: false, knowsTempleSecret: false, temp_hack_success: false };
+            pX = 2; pY = 4; pDir = 0; logContainer.innerHTML = ""; stepKey = "start";
+        }
+        const step = scriptTree[stepKey]; if (!step) return;
+        document.getElementById('options-container').setAttribute('data-step', stepKey);
+        if (step.scene_view) currentSceneView = typeof step.scene_view === 'function' ? step.scene_view() : step.scene_view;
+        triggerRedraw();
+        if (step.portrait && step.speaker) {
+            let speakerName = typeof step.speaker === 'function' ? step.speaker() : step.speaker;
+            updatePortrait(step.portrait, speakerName);
+        }
+        
+        if (step.effect) step.effect(); 
+        
+        let rawText = typeof step.text === 'function' ? step.text() : step.text;
+        
+        updateUIOnly(); 
+        
+        const formattedText = formatDialogue(rawText);
+        const newEntry = document.createElement('div'); newEntry.className = 'log-entry'; newEntry.innerHTML = formattedText; 
+        logContainer.appendChild(newEntry); logContainer.scrollTop = logContainer.scrollHeight;
+        
+        const container = document.getElementById('options-container'); container.innerHTML = '';
+        
+        const optionsList = typeof step.options === 'function' ? step.options() : step.options;
+        if (optionsList && Array.isArray(optionsList)) {
+            optionsList.forEach(opt => { 
+                const btn = document.createElement('button'); btn.className = 'cmd-btn'; 
+                btn.innerText = typeof opt.text === 'function' ? opt.text() : opt.text; 
+                btn.onclick = () => { playClickSound(); if (opt.action) opt.action(); else if (opt.nextStep) renderStep(typeof opt.nextStep === 'function' ? opt.nextStep() : opt.nextStep); }; 
+                container.appendChild(btn); 
+            });
+        }
+
+        if (stepKey === 'street_hub') {
+            const mobileDiv = document.createElement('div'); mobileDiv.className = 'mobile-controls';
+            mobileDiv.innerHTML = `<button class="sys-btn" onclick="playerTurn('left')">↺ 轉左</button><button class="sys-btn" onclick="playerMove()">▲ 往前</button><button class="sys-btn" onclick="playerTurn('right')">轉右 ↻</button>`;
+            container.appendChild(mobileDiv);
+        }
+    }
+
+    window.onload = function() { resizeVectorCanvas(); }
+</script>
+</body>
+</html>
