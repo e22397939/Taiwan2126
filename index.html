@@ -48,7 +48,8 @@
         #vector-canvas { width: 100%; height: 100%; background: #010202; display: block; }
         #rain-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; visibility: hidden; }
 
-        .main-log-box { height: 55%; background: var(--theme-bg); padding: 20px; overflow-y: auto; font-size: 14px; line-height: 1.8; box-sizing: border-box; scroll-behavior: smooth; }
+        /* 【神級優化】position: relative 確保 offsetTop 的定位點相對於文字盒頂部，使玩家能從頭讀起 */
+        .main-log-box { position: relative; height: 55%; background: var(--theme-bg); padding: 20px; overflow-y: auto; font-size: 14px; line-height: 1.8; box-sizing: border-box; scroll-behavior: smooth; }
         .log-entry { margin-bottom: 25px; border-bottom: 1px dashed rgba(255, 170, 0, 0.15); padding-bottom: 15px; white-space: pre-wrap; }
         
         .log-os { color: #88ffff; text-shadow: 0 0 3px rgba(0, 255, 255, 0.4); }
@@ -1061,7 +1062,7 @@
             scene_view: "room", portrait: ART.player, speaker: "CITIZEN // UNKNOWN",
             text: "你走到鏡子前，看著鏡子中那具殘破的軀殼。太陽穴上暴露出粗糙的散熱電阻，瞳孔裡是泛著幽藍光暈的雜牌義眼。\n\n[OS_KERNEL]：診斷：瞳孔對焦延遲。散熱系統效率低於12%。\n\n[SUPEREGO]：多麼端正的漢子啊！即使成了機器，也看得出眉宇間隱含的溫良恭儉讓。\n\n[ID_GHOST]：這雙眼睛看起來就像隨時要短路爆炸的劣質爆竹。你到底是個什麼東西？",
             options: [
-                { text: "> 「看著鏡子...我覺得自己簡直不像人。」", nextStep: "mirror_not_human" },
+                { text: "> 「看著鏡子...我覺得自己簡真不像人。」", nextStep: "mirror_not_human" },
                 { text: "> 「...沒什麼感覺，只是一副皮囊罷了。」", nextStep: "mirror_no_feeling" },
                 { text: "> 「應該整理打理一下外觀，保持體面才行。」", nextStep: "mirror_clean_up" }
             ]
@@ -1111,9 +1112,9 @@
                 return `霓虹燈管發出微弱的嗡嗡聲，你失去了過去的記憶。\n你必須透過下方的向量操控面板在 3D 走廊中移動。\n\n多去和街上的人打聽「這裡是哪裡？現在是什麼時候？」也許你能慢慢拼湊出這條街背後的陰謀。\n\n${randBicker}`;
             },
             options: [
-                { text: "[ 往前移動 ] (走廊移動)", action: () => playerMove() },
-                { text: "[ 向左旋轉 ↺ ]", action: () => playerTurn('left') },
-                { text: "[ 向右旋轉 ↻ ]", action: () => playerTurn('right') }
+                { text: "[ 往前 ] (走廊移動)", action: () => playerMove() },
+                { text: "[ 左轉 ]", action: () => playerTurn('left') },
+                { text: "[ 右轉 ]", action: () => playerTurn('right') }
             ]
         },
 
@@ -1211,7 +1212,7 @@
                 } else gameState.temp_success = false;
             },
             text: () => {
-                if (!gameState.temp_success) return ">> 系統：餘額不足。自動收銀機發出警告音：『窮鬼公民，請勿觸摸商品。』";
+                if (!gameState.temp_success) return ">> 系統：餘額不足. 自動收銀機發出警告音：『窮鬼公民，請勿觸摸商品。』";
                 return "交易成功。你拿到了昂貴的「電子香」。";
             },
             options: [ { text: "> [ 繼續購物 ]", nextStep: "goto_ponytwo" }, { text: "> [ 離開超商，退回街頭 ]", nextStep: "street_hub" } ]
@@ -1266,7 +1267,7 @@
         },
         goto_zhonggua: {
             scene_view: "corporate", portrait: ART.zhonggua, speaker: "SYS // 忠卦客服終端",
-            text: "你走進充滿高級冷光的「忠卦電子」。\n你詢問機器人客服：「喂，我是誰？這是哪？」\n機器人冰冷回應：『我們不提供記憶尋回服務，但我們販售頂級神經晶片與防護裝甲，隨時備份您未來的記憶。』\n\n[OS_KERNEL]：警告：該公司硬體存在後門，會偷偷向政府回傳市民的日常記憶。\n[SUPEREGO]：聽話！政府特許的一定是好東西！吃點虧換得安穩，這叫『順從天命』！\n[ID_GHOST]：滾！我死也不會把腦袋交給官僚去備份！",
+            text: "你走進充滿高級冷光的「忠卦電子」。\n你詢問機器人客服：「喂，我是誰？這是哪？」\n機器人冰冷回應：『我們不提供記憶尋回服務，但我們販售頂級神經晶片與防裝甲，隨時備份您未來的記憶。』\n\n[OS_KERNEL]：警告：該公司硬體存在後門，會偷偷向政府回傳市民的日常記憶。\n[SUPEREGO]：聽話！政府特許的一定是好東西！吃點虧換得安穩，這叫『順從天命』！\n[ID_GHOST]：滾！我死也不會把腦袋交給官僚去備份！",
             options: [
                 { text: "> 購買「忠卦特許神經晶片」 (240 企業幣)", nextStep: "zg_buy_chip" },
                 { text: "> 購買「忠卦高級防護裝甲」 (230 企業幣)", nextStep: "zg_buy_armor" },
@@ -1495,10 +1496,14 @@
                     gameState.temp_success = false;
                 }
             },
+            /* 【神級修復】調整了判定順序，如果扣香成功（temp_success 為 true）直接回傳成功文字，避免因物品已被扣除而誤判「沒有電子香」 */
             text: () => {
+                if (gameState.temp_success) {
+                    return "你點燃了「電子香」，發送出高頻算力封包。\n神像雙眼發出綠光：『此卦系統鎖死，因果演算溢位；香火已扣除算力不予歸還，無效對話不予除錯。...』\n[SCS 提升 15，N-E 損耗 15]";
+                }
                 if (!gameState.inventory.includes("電子香")) return "你身上沒有「電子香」。";
                 if (gameState.en < 15) return "你的晶片能量 [N-E] 低於 15，無法啟動電子香。請先補充能量。";
-                return "你點燃了「電子香」，發送出高頻算力封包。\n神像雙眼發出綠光：『此卦系統鎖死，因果演算溢位；香火已扣除算力不予歸還，無效對話不予除錯。...』\n[SCS 提升 15，N-E 損耗 15]";
+                return "發生未知錯誤。";
             },
             options: [ { text: "> [ 繼續留在神殿前 ]", nextStep: "goto_temple" }, { text: "> [ 離開廟宇，退回街頭 ]", nextStep: "street_hub" } ]
         },
@@ -1636,7 +1641,11 @@
         
         const formattedText = formatDialogue(rawText);
         const newEntry = document.createElement('div'); newEntry.className = 'log-entry'; newEntry.innerHTML = formattedText; 
-        logContainer.appendChild(newEntry); logContainer.scrollTop = logContainer.scrollHeight;
+        logContainer.appendChild(newEntry); 
+        
+        /* 【神級優化】全新長文字排版定位：當載入新的故事文本時，捲軸不再粗暴地拉到最底部，
+           而是以該段文本的起點（offsetTop）為基準對齊，讓玩家與手機讀者能流暢地從第一行往下閱讀。 */
+        logContainer.scrollTop = newEntry.offsetTop;
         
         const container = document.getElementById('options-container'); container.innerHTML = '';
         
